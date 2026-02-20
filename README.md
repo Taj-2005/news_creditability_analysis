@@ -53,8 +53,8 @@ Trained on **26,000+ fact-checked Indian news articles** from the [BharatFakeNew
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────────────┐
-│                     INTELLIGENT NEWS CREDIBILITY ANALYSIS SYSTEM                          │
-│                         Milestone 1 · Classical NLP + Machine Learning                    │
+│                     INTELLIGENT NEWS CREDIBILITY ANALYSIS SYSTEM                         │
+│                         Milestone 1 · Classical NLP + Machine Learning                   │
 └──────────────────────────────────────────────────────────────────────────────────────────┘
 
 
@@ -78,7 +78,7 @@ Trained on **26,000+ fact-checked Indian news articles** from the [BharatFakeNew
         └─────────┬──────────┘
                   ▼
         ┌──────────────────────────────────────────┐
-        │              Preprocessing                │
+        │              Preprocessing               │
         │------------------------------------------│
         │ • Lowercasing                            │
         │ • Remove URLs & punctuation              │
