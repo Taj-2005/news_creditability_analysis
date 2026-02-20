@@ -1,6 +1,6 @@
 <div align="center">
 
-# 📰News Credibility Classification System
+# News Credibility Classification System
 
 ### Intelligent Misinformation Detection via Classical NLP & Machine Learning
 
@@ -41,11 +41,12 @@ Trained on **26,000+ fact-checked Indian news articles** from the [BharatFakeNew
 
 ## Project Team - Section A
 
-| Team Member        | Role                         | Contribution                                                                                                                                                                                                 | GitHub Profile                           |
-| ------------------ | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| **Shaik Tajuddin** | Project Lead & GitHub Manager| Project leadership, repository creation & enhancement, roadmap planning, repo structure planning, notebook (ipynb) design, requirements & tech stack planning, PR reviews, version control & collaboration management | [@Taj-2005](https://github.com/Taj-2005) |
-| **Nipun**          | Backend & Packaging Engineer | Folder architecture implementation, converting notebooks into modular Python files, building reusable ML pipeline, preparing codebase for Streamlit integration, project modularization                 | [@nipun1803](https://github.com/nipun1803)                         |
-| **Hadole**         | Deployment & UI Engineer     | Streamlit application design, deployment architecture, model integration into UI, preparing deployable structure, hosting setup & deployment pipeline, usability flow                                   | [@omkar-hadole](https://github.com/omkar-hadole)                         |
+
+| Team Member        | Role                          | Contribution                                                                                                                                                                                                          | GitHub Profile                                   |
+| ------------------ | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| **Shaik Tajuddin** | Project Lead & GitHub Manager | Project leadership, repository creation & enhancement, roadmap planning, repo structure planning, notebook (ipynb) design, requirements & tech stack planning, PR reviews, version control & collaboration management | [@Taj-2005](https://github.com/Taj-2005)         |
+| **Nipun**          | Backend & Packaging Engineer  | Folder architecture implementation, converting notebooks into modular Python files, building reusable ML pipeline, preparing codebase for Streamlit integration, project modularization                               | [@nipun1803](https://github.com/nipun1803)       |
+| **Hadole**         | Deployment & UI Engineer      | Streamlit application design, deployment architecture, model integration into UI, preparing deployable structure, hosting setup & deployment pipeline, usability flow                                                 | [@omkar-hadole](https://github.com/omkar-hadole) |
 
 ---
 
