@@ -52,32 +52,106 @@ Trained on **26,000+ fact-checked Indian news articles** from the [BharatFakeNew
 ## System Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                        NEWS CREDIBILITY SYSTEM                               │
-│                    Milestone 1 · Classical NLP + ML                          │
-└──────────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────────────┐
+│                     INTELLIGENT NEWS CREDIBILITY ANALYSIS SYSTEM                          │
+│                         Milestone 1 · Classical NLP + Machine Learning                    │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
 
-  ┌──────────────┐    ┌────────────────────┐    ┌─────────────────┐    ┌────────────────┐
-  │  Raw Input   │    │   Preprocessing    │    │ Feature Extrac- │    │ Classification │
-  │              │───▶│                    │───▶│ tion (TF-IDF)   │───▶│   (LR / DT)    │
-  │ Excel / Text │    │ • Lowercase        │    │                 │    │                │
-  └──────────────┘    │ • Remove URLs      │    │ • max 15K feats │    │ • Logistic Reg │
-         │            │ • Strip punctuation│    │ • unigrams +    │    │ • Decision Tree│
-         │            │ • Remove stopwords │    │   bigrams       │    │ • predict_proba│
-         ▼            │ • Lemmatize (WN)   │    │ • sublinear_tf  │    └───────┬────────┘
-  BharatFakeNews      └────────────────────┘    └─────────────────┘           │
-  Kosh Dataset                                                                 ▼
-  Eng_Trans_Statement                                                  ┌──────────────┐
-  + Eng_Trans_Body                                               ┌────▶│  Fake (1)    │
-  + Label (bool)                                                 │     │  P = 0.87    │
-                                                                 │     └──────────────┘
-  ━━━━━━━━━━━━━━━━ TRAINING PHASE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┿━━━━━━━━━━━━━━━━━━━
-                                                                 │
-  load_excel → prepare_text_column → stratified_split (80/20) ──┤
-  → Pipeline.fit(X_train, y_train) → evaluate → joblib.dump() ──┘
 
-  ━━━━━━━━━━━━━━━━ INFERENCE PHASE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Load pipeline.pkl → user_input → clean_text() → pipeline.predict() → verdict + score
+                                    DATA SOURCE
+                           ───────────────────────────
+                             BharatFakeNewsKosh Dataset
+                       (Eng_Trans_Statement + News_Body + Label)
+
+
+╔══════════════════════════════════════ TRAINING PIPELINE ══════════════════════════════════════╗
+
+        ┌────────────────────┐
+        │   Data Loading     │
+        │  Excel → DataFrame │
+        └─────────┬──────────┘
+                  ▼
+        ┌────────────────────┐
+        │ Text Preparation   │
+        │ Merge statement +  │
+        │ article body       │
+        └─────────┬──────────┘
+                  ▼
+        ┌──────────────────────────────────────────┐
+        │              Preprocessing                │
+        │------------------------------------------│
+        │ • Lowercasing                            │
+        │ • Remove URLs & punctuation              │
+        │ • Stopword removal                       │
+        │ • Tokenization                           │
+        │ • Lemmatization (WordNet)                │
+        └─────────┬────────────────────────────────┘
+                  ▼
+        ┌──────────────────────────────────────────┐
+        │        Feature Engineering (TF-IDF)      │
+        │------------------------------------------│
+        │ • 15K max features                       │
+        │ • Unigrams + Bigrams                     │
+        │ • Sublinear TF scaling                   │
+        └─────────┬────────────────────────────────┘
+                  ▼
+        ┌──────────────────────────────────────────┐
+        │          Machine Learning Models         │
+        │------------------------------------------│
+        │ • Logistic Regression                    │
+        │ • Decision Tree                          │
+        │ • Probability Estimation                 │
+        └─────────┬────────────────────────────────┘
+                  ▼
+        ┌────────────────────┐
+        │ Model Evaluation   │
+        │ Precision / Recall │
+        │ F1 Score / Matrix  │
+        └─────────┬──────────┘
+                  ▼
+        ┌────────────────────┐
+        │ Model Persistence  │
+        │ Save pipeline.pkl  │
+        └────────────────────┘
+
+╚══════════════════════════════════════════════════════════════════════════════════════════════╝
+
+
+
+╔══════════════════════════════════════ INFERENCE PIPELINE ═════════════════════════════════════╗
+
+        User Input (Article Text / URL)
+                    │
+                    ▼
+        ┌────────────────────┐
+        │ Load Saved Model   │
+        │ pipeline.pkl       │
+        └─────────┬──────────┘
+                  ▼
+        ┌────────────────────┐
+        │ Clean Input Text   │
+        │ Same preprocessing │
+        └─────────┬──────────┘
+                  ▼
+        ┌────────────────────┐
+        │ Vectorization      │
+        │ TF-IDF Transform   │
+        └─────────┬──────────┘
+                  ▼
+        ┌────────────────────┐
+        │ Prediction Engine  │
+        │ predict_proba()    │
+        └─────────┬──────────┘
+                  ▼
+        ┌────────────────────────────────────┐
+        │ Credibility Assessment Output      │
+        │------------------------------------│
+        │ Fake / Real Verdict                │
+        │ Confidence Score (0–1)             │
+        │ Risk Level (High / Low)            │
+        └────────────────────────────────────┘
+
+╚══════════════════════════════════════════════════════════════════════════════════════════════╝
 ```
 
 ### Data Flow
