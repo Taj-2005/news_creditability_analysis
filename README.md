@@ -169,6 +169,7 @@ Trained on **26,000+ fact-checked Indian news articles** from the [BharatFakeNew
 | **Serialize** | Fitted pipeline           | `model/pipeline.pkl`                           | `joblib`                        |
 | **Serve**     | Raw user text             | Verdict + probability                          | `src/app/main.py`               |
 
+
 > **Critical invariant:** The same `clean_text()` function and the same fitted pipeline (vectorizer + classifier) are used in both training and inference. No preprocessing drift.
 
 ---
