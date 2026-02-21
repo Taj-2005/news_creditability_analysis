@@ -187,7 +187,7 @@ GenAI/
 │
 ├── bharatfakenewskosh.xlsx            # Dataset (add locally; excluded from VCS if >50MB)
 ├── model/
-│   └── pipeline.pkl                   # Serialized sklearn Pipeline (post-training)
+│   └── pipeline.pkl                   # Serialized sklearn Pipeline (post-training; see note below)
 │
 └── src/
     ├── __init__.py
@@ -214,6 +214,8 @@ GenAI/
 ---
 
 ## Quickstart
+
+**This repo includes a pre-trained model** (`model/pipeline.pkl`), you can skip steps 3–4 and run the app directly after step 2 (see [Deployment](#deployment) for when the model is pushed to the repo).
 
 ### 1. Clone & enter the repo
 
@@ -408,6 +410,9 @@ git add .
 git commit -m "feat: milestone 1 complete"
 git push origin main
 ```
+
+**Should you push `model/pipeline.pkl`?**  
+Push it **only if it’s small** (e.g. a few MB) and you want a **“clone + run app”** experience with no extra setup. In that case, document in the README that **this repo includes a pre-trained model** so users can run the Streamlit app without training first. If the file is large (tens or hundreds of MB), keep it out of the repo (e.g. via `.gitignore`) and have users train the model from the notebook or download the artifact from a release/cloud storage.
 
 > If `model/pipeline.pkl` exceeds 100MB, use Git LFS:
 >
