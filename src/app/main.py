@@ -1,12 +1,14 @@
 """
 Streamlit UI for News Credibility Analyzer.
 
-Loads the trained pipeline from model/pipeline.pkl and uses the same
-preprocessing (clean_text) as training. Run with:
-  streamlit run src/app/main.py
-Or from repo root: streamlit run app.py (if app.py delegates here).
+Inference is fully independent from training: at runtime we only need
+- model/pipeline.pkl (serialized sklearn Pipeline from training)
+- clean_text() (same preprocessing contract as training)
+
+Run: streamlit run app.py  or  streamlit run src/app/main.py
 """
 
+import logging
 import sys
 from pathlib import Path
 from typing import Tuple
@@ -21,8 +23,24 @@ import streamlit as st
 from src.features.preprocessing import clean_text
 
 # -----------------------------------------------------------------------------
-# Constants (UI / content only)
+# Logging (production reliability)
 # -----------------------------------------------------------------------------
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger("news_credibility_app")
+
+# -----------------------------------------------------------------------------
+# Constants (UI + model artifact paths)
+# -----------------------------------------------------------------------------
+
+# Model artifacts: store pipeline.pkl under <repo_root>/model/ or <cwd>/model/
+# Inference depends only on this artifact and clean_text(); no training code at runtime.
+MODEL_DIR_NAME = "model"
+MODEL_FILENAME = "pipeline.pkl"
 
 PAGE_TITLE = "News Credibility Analyzer"
 PAGE_SUBTITLE = "Intelligent misinformation detection using classical NLP & machine learning"
@@ -55,34 +73,44 @@ MAX_INPUT_LENGTH = 50_000
 
 def _model_base_dir() -> Path:
     """Resolve model directory in a deployment-safe way (no hardcoded local paths)."""
-    # 1) Relative to this file: repo_root/model/ (works when app runs from repo root)
-    file_based = repo_root / "model"
-    if (file_based / "pipeline.pkl").exists():
+    file_based = repo_root / MODEL_DIR_NAME
+    cwd_based = Path.cwd() / MODEL_DIR_NAME
+    if (file_based / MODEL_FILENAME).exists():
         return file_based
-    # 2) Relative to current working directory (e.g. Streamlit Cloud)
-    cwd_based = Path.cwd() / "model"
-    if (cwd_based / "pipeline.pkl").exists():
+    if (cwd_based / MODEL_FILENAME).exists():
         return cwd_based
-    return file_based  # Use for error message (expected location)
+    return file_based  # Expected location for error message
 
 
 @st.cache_resource
 def load_model():
-    """Load the trained pipeline from model/pipeline.pkl (environment-safe paths)."""
+    """
+    Load the trained pipeline from model/pipeline.pkl (cached, environment-safe).
+    Raises FileNotFoundError if the model artifact is missing.
+    """
     import joblib
 
     base = _model_base_dir()
-    model_path = base / "pipeline.pkl"
+    model_path = base / MODEL_FILENAME
     if not model_path.exists():
+        logger.error("Model file missing: %s", model_path)
         raise FileNotFoundError(
-            f"Model not found at {model_path}. Run training first or add model/pipeline.pkl to the repo (see README)."
+            f"Model not found at {model_path}. "
+            f"Ensure {MODEL_DIR_NAME}/{MODEL_FILENAME} exists (run training or add artifact to repo). See README."
         )
-    return joblib.load(model_path)
+    try:
+        pipeline = joblib.load(model_path)
+        logger.info("Model loaded successfully from %s", model_path)
+        return pipeline
+    except Exception as e:
+        logger.exception("Failed to load model from %s: %s", model_path, e)
+        raise
 
 
 def run_prediction(pipeline, raw_text: str) -> Tuple[int, float, float]:
     """
     Run model prediction on raw text. Core logic only; no UI.
+    Caller should handle exceptions for production reliability.
 
     Returns:
         (prediction, fake_probability, real_probability)
@@ -99,14 +127,17 @@ def run_prediction(pipeline, raw_text: str) -> Tuple[int, float, float]:
 def validate_input(text: str) -> Tuple[bool, str]:
     """
     Validate user input. Returns (is_valid, error_message).
-    Empty error_message means valid.
+    Empty error_message means valid. Logs validation failures.
     """
     if not text or not text.strip():
+        logger.debug("Validation failed: empty input")
         return False, "Please enter some text."
     t = text.strip()
     if len(t) < MIN_INPUT_LENGTH:
+        logger.debug("Validation failed: input too short (len=%d)", len(t))
         return False, f"Text is too short (minimum {MIN_INPUT_LENGTH} characters)."
     if len(t) > MAX_INPUT_LENGTH:
+        logger.debug("Validation failed: input too long (len=%d)", len(t))
         return False, f"Text exceeds maximum length ({MAX_INPUT_LENGTH:,} characters)."
     return True, ""
 
@@ -272,13 +303,26 @@ def main() -> None:
                 if not is_valid:
                     st.warning(f"⚠️ {err}")
                 else:
-                    with st.spinner("Analyzing..."):
-                        pipeline = load_model()
-                        prediction, fake_prob, real_prob = run_prediction(
-                            pipeline, input_text
+                    try:
+                        with st.spinner("Analyzing..."):
+                            pipeline = load_model()
+                            prediction, fake_prob, real_prob = run_prediction(
+                                pipeline, input_text
+                            )
+                        st.session_state["last_result"] = (prediction, fake_prob, real_prob)
+                        render_output_section(prediction, fake_prob, real_prob)
+                    except FileNotFoundError as e:
+                        logger.error("Model not found: %s", e)
+                        st.error(
+                            f"**Model not available.** {e}. "
+                            f"Add `{MODEL_DIR_NAME}/{MODEL_FILENAME}` to the project or run training (see README)."
                         )
-                    st.session_state["last_result"] = (prediction, fake_prob, real_prob)
-                    render_output_section(prediction, fake_prob, real_prob)
+                    except Exception as e:
+                        logger.exception("Prediction failed: %s", e)
+                        st.error(
+                            "**Prediction failed.** Something went wrong while analyzing the text. "
+                            "Please try again or use different input."
+                        )
             elif "last_result" in st.session_state:
                 p, fp, rp = st.session_state["last_result"]
                 render_output_section(p, fp, rp)
