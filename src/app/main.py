@@ -9,6 +9,7 @@ Or from repo root: streamlit run app.py (if app.py delegates here).
 
 import sys
 from pathlib import Path
+from typing import Tuple
 
 # Ensure project root is on path for "src" imports
 repo_root = Path(__file__).resolve().parent.parent.parent
@@ -18,6 +19,38 @@ if str(repo_root) not in sys.path:
 import streamlit as st
 
 from src.features.preprocessing import clean_text
+
+# -----------------------------------------------------------------------------
+# Constants (UI / content only)
+# -----------------------------------------------------------------------------
+
+PAGE_TITLE = "News Credibility Analyzer"
+PAGE_SUBTITLE = "Intelligent misinformation detection using classical NLP & machine learning"
+MODEL_ALGORITHM = "Logistic Regression"
+MODEL_FEATURES = "TF-IDF (unigrams + bigrams)"
+DATASET_NAME = "BharatFakeNewsKosh"
+DATASET_SIZE = "26,000+"
+
+EXAMPLE_TEXTS = {
+    "Real (credible)": (
+        "Prime Minister Modi received an honorary doctorate from Oxford University "
+        "in recognition of India's digital transformation initiatives and governance reforms."
+    ),
+    "Fake (misinformation)": (
+        "Viral video claims to show a digitally edited flood in Rajasthan designed "
+        "to mislead viewers about the actual situation. Fact-checkers have debunked the clip."
+    ),
+    "Short headline": (
+        "Breaking: Scientists announce breakthrough in renewable energy storage technology."
+    ),
+}
+
+MIN_INPUT_LENGTH = 10
+MAX_INPUT_LENGTH = 50_000
+
+# -----------------------------------------------------------------------------
+# Model logic (no UI)
+# -----------------------------------------------------------------------------
 
 
 @st.cache_resource
@@ -33,68 +66,213 @@ def load_model():
     return joblib.load(model_path)
 
 
-def main() -> None:
-    st.set_page_config(
-        page_title="News Credibility Analyzer",
-        page_icon="📰",
-        layout="centered",
-    )
-    st.title("📰 News Credibility Analyzer")
+def run_prediction(pipeline, raw_text: str) -> Tuple[int, float, float]:
+    """
+    Run model prediction on raw text. Core logic only; no UI.
+
+    Returns:
+        (prediction, fake_probability, real_probability)
+        prediction: 0 = Real, 1 = Fake
+    """
+    cleaned = clean_text(raw_text)
+    prediction = int(pipeline.predict([cleaned])[0])
+    proba = pipeline.predict_proba([cleaned])[0]
+    real_prob = float(proba[0])
+    fake_prob = float(proba[1])
+    return prediction, fake_prob, real_prob
+
+
+def validate_input(text: str) -> Tuple[bool, str]:
+    """
+    Validate user input. Returns (is_valid, error_message).
+    Empty error_message means valid.
+    """
+    if not text or not text.strip():
+        return False, "Please enter some text."
+    t = text.strip()
+    if len(t) < MIN_INPUT_LENGTH:
+        return False, f"Text is too short (minimum {MIN_INPUT_LENGTH} characters)."
+    if len(t) > MAX_INPUT_LENGTH:
+        return False, f"Text exceeds maximum length ({MAX_INPUT_LENGTH:,} characters)."
+    return True, ""
+
+
+# -----------------------------------------------------------------------------
+# UI components (no model logic)
+# -----------------------------------------------------------------------------
+
+
+def render_header() -> None:
+    """Styled header section with title and subtitle."""
     st.markdown(
         """
-        **Project 11 — Milestone 1** | BharatFakeNewsKosh Dataset  
-        Paste a news article or statement below to check its credibility.
-        """
+        <div style="
+            padding: 1rem 0 1.5rem 0;
+            border-bottom: 1px solid rgba(49, 51, 63, 0.2);
+            margin-bottom: 1.5rem;
+        ">
+            <h1 style="margin: 0; font-size: 2rem;">📰 News Credibility Analyzer</h1>
+            <p style="margin: 0.5rem 0 0 0; color: #6b7280; font-size: 1rem;">
+                """ + PAGE_SUBTITLE + """
+            </p>
+            <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #9ca3af;">
+                Project 11 · Milestone 1 · BharatFakeNewsKosh Dataset
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
-    st.divider()
 
+
+def render_input_section() -> Tuple[str, bool]:
+    """
+    Render input area, example buttons, and action buttons.
+    Returns (input_text, should_analyze).
+    """
+    # Pre-fill from example if a fill was requested (from session_state)
+    if st.session_state.get("example_fill_key") and st.session_state["example_fill_key"] in EXAMPLE_TEXTS:
+        st.session_state["main_input"] = EXAMPLE_TEXTS[st.session_state["example_fill_key"]]
+        del st.session_state["example_fill_key"]
+
+    st.markdown("### 📝 Input")
     input_text = st.text_area(
-        "📝 Enter News Article or Statement:",
+        "Paste a news article, headline, or claim to analyze",
         height=200,
-        placeholder="Paste your news article text here...",
+        placeholder="Paste your text here... (e.g. headline, article excerpt, or social media post)",
+        key="main_input",
+        label_visibility="collapsed",
     )
 
-    if st.button("🔍 Analyze Credibility", type="primary", use_container_width=True):
-        if not input_text.strip():
-            st.warning("⚠️ Please enter some text first.")
-        else:
-            with st.spinner("Analyzing..."):
-                pipeline = load_model()
-                cleaned = clean_text(input_text)
-                prediction = pipeline.predict([cleaned])[0]
-                proba = pipeline.predict_proba([cleaned])[0]
-                fake_prob = float(proba[1])
-                real_prob = float(proba[0])
+    st.markdown("**Load example:**")
+    ex1, ex2, ex3, _ = st.columns(4)
+    with ex1:
+        if st.button("Example: Real", key="ex_real", use_container_width=True):
+            st.session_state["example_fill_key"] = "Real (credible)"
+            st.rerun()
+    with ex2:
+        if st.button("Example: Fake", key="ex_fake", use_container_width=True):
+            st.session_state["example_fill_key"] = "Fake (misinformation)"
+            st.rerun()
+    with ex3:
+        if st.button("Example: Headline", key="ex_short", use_container_width=True):
+            st.session_state["example_fill_key"] = "Short headline"
+            st.rerun()
 
-            st.divider()
+    col_btn1, col_btn2, _ = st.columns([1, 1, 3])
+    with col_btn1:
+        analyze_clicked = st.button("🔍 Analyze Credibility", type="primary", use_container_width=True)
+    with col_btn2:
+        if st.button("🗑️ Clear", use_container_width=True):
+            st.session_state["main_input"] = ""
+            if "last_result" in st.session_state:
+                del st.session_state["last_result"]
+            st.rerun()
 
-            if prediction == 1:
-                st.error("🔴 Verdict: Likely FAKE / Misinformation")
-            else:
-                st.success("🟢 Verdict: Likely CREDIBLE / Real")
+    return input_text or "", analyze_clicked
 
-            col1, col2 = st.columns(2)
-            col1.metric("Fake Probability", f"{fake_prob:.1%}")
-            col2.metric("Real Probability", f"{real_prob:.1%}")
 
-            st.markdown("**Credibility Risk Score:**")
-            st.progress(fake_prob)
+def render_output_section(prediction: int, fake_prob: float, real_prob: float) -> None:
+    """Render verdict, metrics, and confidence bar. Color-coded: Green = Real, Red = Fake."""
+    st.markdown("### 📊 Result")
 
-            with st.expander("ℹ️ How this works"):
-                st.markdown(
-                    """
-                    This tool uses a **Logistic Regression** model trained on **26,000+ Indian news articles**
-                    from the BharatFakeNewsKosh dataset.
-                    Text is preprocessed (stopword removal, lemmatization) and vectorized using **TF-IDF (bigrams)**.
-                    The model outputs a probability score — higher score = higher risk of misinformation.
-                    \n⚠️ This is an AI tool. Always verify news with trusted sources.
-                    """
-                )
+    # Color-coded verdict
+    if prediction == 1:
+        verdict_text = "Likely **FAKE** / Misinformation"
+        verdict_icon = "🔴"
+        st.error(f"{verdict_icon} Verdict: {verdict_text}")
+    else:
+        verdict_text = "Likely **CREDIBLE** / Real"
+        verdict_icon = "🟢"
+        st.success(f"{verdict_icon} Verdict: {verdict_text}")
 
-    st.divider()
+    # Metrics in columns
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Fake probability", f"{fake_prob:.1%}")
+    with col2:
+        st.metric("Real probability", f"{real_prob:.1%}")
+    with col3:
+        confidence = fake_prob if prediction == 1 else real_prob
+        st.metric("Model confidence", f"{confidence:.1%}")
+
+    st.markdown("**Credibility risk score** (higher = more likely fake)")
+    st.progress(fake_prob)
+
+    # Model metadata inline
     st.caption(
-        "Project 11 | Intelligent News Credibility Analysis | Milestone 1"
+        f"Algorithm: {MODEL_ALGORITHM} · Features: {MODEL_FEATURES} · "
+        f"Trained on {DATASET_NAME} ({DATASET_SIZE} articles)"
     )
+
+
+def render_about_model() -> None:
+    """Expandable 'About Model' section."""
+    with st.expander("ℹ️ About this model", expanded=False):
+        st.markdown(
+            f"""
+            - **Algorithm:** {MODEL_ALGORITHM} with **{MODEL_FEATURES}**
+            - **Dataset:** {DATASET_NAME} — {DATASET_SIZE} fact-checked Indian news articles
+            - **Task:** Binary classification (Fake vs Real)
+            - **Preprocessing:** Lowercasing, URL/mention removal, stopword removal, WordNet lemmatization
+            - **Output:** Probability score for "Fake"; higher value = higher risk of misinformation
+
+            ⚠️ **Disclaimer:** This is an AI-assisted tool. Always verify important news with trusted sources.
+            """
+        )
+
+
+def render_footer() -> None:
+    """Footer caption."""
+    st.divider()
+    st.caption("Project 11 · Intelligent News Credibility Analysis · Milestone 1")
+
+
+# -----------------------------------------------------------------------------
+# Main app
+# -----------------------------------------------------------------------------
+
+
+def main() -> None:
+    st.set_page_config(
+        page_title=PAGE_TITLE,
+        page_icon="📰",
+        layout="wide",
+        initial_sidebar_state="collapsed",
+    )
+
+    render_header()
+
+    # Layout: main content in a container; optional sidebar later
+    main_container = st.container()
+    with main_container:
+        col_left, col_right = st.columns([1, 1])
+
+        with col_left:
+            st.markdown("#### Input section")
+            input_text, analyze_clicked = render_input_section()
+
+        with col_right:
+            st.markdown("#### Output")
+            if analyze_clicked:
+                is_valid, err = validate_input(input_text)
+                if not is_valid:
+                    st.warning(f"⚠️ {err}")
+                else:
+                    with st.spinner("Analyzing..."):
+                        pipeline = load_model()
+                        prediction, fake_prob, real_prob = run_prediction(
+                            pipeline, input_text
+                        )
+                    st.session_state["last_result"] = (prediction, fake_prob, real_prob)
+                    render_output_section(prediction, fake_prob, real_prob)
+            elif "last_result" in st.session_state:
+                p, fp, rp = st.session_state["last_result"]
+                render_output_section(p, fp, rp)
+            else:
+                st.info("👈 Enter text and click **Analyze Credibility** to see the result.")
+
+    render_about_model()
+    render_footer()
 
 
 if __name__ == "__main__":
