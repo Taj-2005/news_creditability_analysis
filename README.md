@@ -403,6 +403,12 @@ This project is structured for deployment to Streamlit Community Cloud (free tie
 
 ### Deploy to Streamlit Community Cloud
 
+The repo is set up for production deployment:
+
+- **`.streamlit/config.toml`** — `headless = true`, `enableCORS = false`, `enableXsrfProtection = false` for Cloud.
+- **Entry point:** `app.py` at repo root (set **Main file:** `app.py` in the Cloud UI).
+- **Model path:** The app resolves `model/pipeline.pkl` from the repo root (no hardcoded local paths); works when Cloud runs from the project directory.
+
 **Step 1 — Push to GitHub**
 
 ```bash

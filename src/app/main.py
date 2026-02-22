@@ -53,15 +53,29 @@ MAX_INPUT_LENGTH = 50_000
 # -----------------------------------------------------------------------------
 
 
+def _model_base_dir() -> Path:
+    """Resolve model directory in a deployment-safe way (no hardcoded local paths)."""
+    # 1) Relative to this file: repo_root/model/ (works when app runs from repo root)
+    file_based = repo_root / "model"
+    if (file_based / "pipeline.pkl").exists():
+        return file_based
+    # 2) Relative to current working directory (e.g. Streamlit Cloud)
+    cwd_based = Path.cwd() / "model"
+    if (cwd_based / "pipeline.pkl").exists():
+        return cwd_based
+    return file_based  # Use for error message (expected location)
+
+
 @st.cache_resource
 def load_model():
-    """Load the trained pipeline from model/pipeline.pkl."""
+    """Load the trained pipeline from model/pipeline.pkl (environment-safe paths)."""
     import joblib
 
-    model_path = repo_root / "model" / "pipeline.pkl"
+    base = _model_base_dir()
+    model_path = base / "pipeline.pkl"
     if not model_path.exists():
         raise FileNotFoundError(
-            f"Model not found at {model_path}. Run training first (see README)."
+            f"Model not found at {model_path}. Run training first or add model/pipeline.pkl to the repo (see README)."
         )
     return joblib.load(model_path)
 
