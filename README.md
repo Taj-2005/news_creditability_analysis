@@ -169,7 +169,6 @@ Trained on **26,000+ fact-checked Indian news articles** from the [BharatFakeNew
 | **Serialize** | Fitted pipeline           | `model/pipeline.pkl`                           | `joblib`                        |
 | **Serve**     | Raw user text             | Verdict + probability                          | `src/app/main.py`               |
 
-
 > **Critical invariant:** The same `clean_text()` function and the same fitted pipeline (vectorizer + classifier) are used in both training and inference. No preprocessing drift.
 
 ---
@@ -403,12 +402,6 @@ This project is structured for deployment to Streamlit Community Cloud (free tie
 
 ### Deploy to Streamlit Community Cloud
 
-The repo is set up for production deployment:
-
-- **`.streamlit/config.toml`** — `headless = true`, `enableCORS = false`, `enableXsrfProtection = false` for Cloud.
-- **Entry point:** `app.py` at repo root (set **Main file:** `app.py` in the Cloud UI).
-- **Model path:** The app resolves `model/pipeline.pkl` from the repo root (no hardcoded local paths); works when Cloud runs from the project directory.
-
 **Step 1 — Push to GitHub**
 
 ```bash
@@ -417,8 +410,7 @@ git commit -m "feat: milestone 1 complete"
 git push origin main
 ```
 
-**Should you push `model/pipeline.pkl`?**  
-Push it **only if it’s small** (e.g. a few MB) and you want a **“clone + run app”** experience with no extra setup. In that case, document in the README that **this repo includes a pre-trained model** so users can run the Streamlit app without training first. If the file is large (tens or hundreds of MB), keep it out of the repo (e.g. via `.gitignore`) and have users train the model from the notebook or download the artifact from a release/cloud storage.
+**Should you push `model/pipeline.pkl`?**Push it **only if it’s small** (e.g. a few MB) and you want a **“clone + run app”** experience with no extra setup. In that case, document in the README that **this repo includes a pre-trained model** so users can run the Streamlit app without training first. If the file is large (tens or hundreds of MB), keep it out of the repo (e.g. via `.gitignore`) and have users train the model from the notebook or download the artifact from a release/cloud storage.
 
 > If `model/pipeline.pkl` exceeds 100MB, use Git LFS:
 >
