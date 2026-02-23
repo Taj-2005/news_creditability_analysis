@@ -1,0 +1,1 @@
+added deployment guide and hosting instructions in README

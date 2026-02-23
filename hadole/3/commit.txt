@@ -1,0 +1,1 @@
+optimized project structure for deployment stability and scalability
