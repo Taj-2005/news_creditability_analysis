@@ -1,13 +1,13 @@
 """
-Entry point for the Streamlit News Credibility app.
+Entry point for the News Credibility AI dashboard.
 
 Run from repository root:
   streamlit run app.py
 
-Alternatively: streamlit run src/app/main.py
+Multi-page dashboard: Home, Model comparison, Dataset insights, Live prediction, Architecture.
 """
 
-from src.app.main import main
+from src.app.dashboard import run
 
 if __name__ == "__main__":
-    main()
+    run()
