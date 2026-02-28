@@ -48,7 +48,7 @@ def run():
         st.markdown(
             """
             <div style="margin-bottom: 0.5rem;">
-                <p style="font-size: 1rem; font-weight: 600; color: #111827; margin: 0;">News Credibility AI</p>
+                <p style="font-size: 1rem; font-weight: 600; color: #374151; margin: 0;">News Credibility AI</p>
                 <p style="font-size: 0.75rem; color: #6b7280; margin: 0.25rem 0 0 0;">Misinformation detection</p>
             </div>
             """,

@@ -5,8 +5,8 @@ import streamlit as st
 from src.app.components.ui import page_header
 from src.app.core import (
     DATASET_NAME,
-    DATASET_SIZE,
-    EXPECTED_METRICS,
+    get_dataset_size_str,
+    get_expected_metrics,
     PAGE_TITLE,
 )
 
@@ -23,9 +23,21 @@ def render():
         "Misinformation spreads faster than manual fact-checking can scale. This platform provides **automated binary classification** of news as **Fake** or **Real**, using a reproducible ML pipeline and a deployment-ready dashboard — interpretable models, no LLMs, no GPU."
     )
 
-    # KPI section: big metric cards
+    # KPI section: big metric cards (from evaluation_results.json)
+    metrics = get_expected_metrics()
+    if not metrics:
+        st.warning(
+            "Evaluation results not found. Run the notebook (with the dataset) or "
+            "`python scripts/run_evaluation.py` to generate metrics, then restart the app."
+        )
+        st.stop()
+
+    lr = metrics.get("Logistic Regression")
+    if not lr:
+        st.warning("Logistic Regression metrics missing in evaluation results.")
+        st.stop()
+
     st.markdown("#### Key performance metrics")
-    lr = EXPECTED_METRICS["Logistic Regression"]
     k1, k2, k3, k4 = st.columns(4)
     with k1:
         st.metric("Accuracy", f"{lr['Accuracy']:.2%}", help="Overall correct predictions")
@@ -34,8 +46,12 @@ def render():
     with k3:
         st.metric("ROC-AUC", f"{lr['ROC-AUC']:.2%}", help="Ranking / discrimination")
     with k4:
-        cv_mean, cv_std = lr["CV F1"]
-        st.metric("5-Fold CV F1", f"{cv_mean:.2%} ± {cv_std:.2%}", help="Cross-validation stability")
+        cv = lr.get("CV F1")
+        if isinstance(cv, (list, tuple)) and len(cv) >= 2:
+            cv_mean, cv_std = float(cv[0]), float(cv[1])
+            st.metric("5-Fold CV F1", f"{cv_mean:.2%} ± {cv_std:.2%}", help="Cross-validation stability")
+        else:
+            st.metric("5-Fold CV F1", "—", help="Run evaluation to compute")
 
     # Animated-style progress bars (visual only; Streamlit progress is 0–1)
     st.markdown("")
@@ -55,7 +71,7 @@ def render():
     with d1:
         st.metric("Dataset", DATASET_NAME)
     with d2:
-        st.metric("Articles", DATASET_SIZE)
+        st.metric("Articles", get_dataset_size_str())
     with d3:
         st.metric("Task", "Fake vs Real (binary)")
     st.caption("English-translated headlines and bodies from Indian fact-checked news.")

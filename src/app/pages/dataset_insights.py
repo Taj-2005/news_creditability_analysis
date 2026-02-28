@@ -4,21 +4,18 @@ import numpy as np
 import streamlit as st
 
 from src.app.components.ui import page_header
-from src.app.core import DATASET_NAME, DATASET_SIZE, load_model
+from src.app.core import DATASET_NAME, get_dataset_size_str, load_model
 from src.evaluation.plotly_viz import (
     get_lr_feature_importance,
     plotly_donut_class_distribution,
     plotly_histogram_text_length,
     plotly_top_tfidf_features,
 )
-
-# Approximate from README: 60.6% Fake, 39.4% Real
-FAKE_COUNT = 15_800
-REAL_COUNT = 10_400
+from src.evaluation.results_loader import get_dataset_stats
 
 
 def _sample_text_lengths(seed: int = 42) -> tuple:
-    """Illustrative text length samples per class (no dataset load)."""
+    """Illustrative text length samples per class (when no dataset is loaded)."""
     rng = np.random.default_rng(seed)
     fake_len = rng.lognormal(5, 1, 500)
     real_len = rng.lognormal(5.2, 1, 500)
@@ -26,24 +23,44 @@ def _sample_text_lengths(seed: int = 42) -> tuple:
 
 
 def render():
-    page_header("Dataset Intelligence", f"Summary for **{DATASET_NAME}** ({DATASET_SIZE} articles)")
+    dataset_size_str = get_dataset_size_str()
+    page_header("Dataset Intelligence", f"Summary for **{DATASET_NAME}** ({dataset_size_str} articles)")
 
-    # Top metrics row
+    stats = get_dataset_stats()
+    if not stats:
+        st.warning(
+            "Dataset statistics not found. Run the notebook (with the dataset) or "
+            "`python scripts/run_evaluation.py` to generate evaluation results."
+        )
+        st.stop()
+
+    total = stats.get("after_drop_empty") or stats.get("total_samples")
+    class_counts = stats.get("class_counts") or {}
+    class_pct = stats.get("class_pct") or {}
+    fake_count = class_counts.get("Fake", 0)
+    real_count = class_counts.get("Real", 0)
+    fake_pct = class_pct.get("Fake", 0)
+    real_pct = class_pct.get("Real", 0)
+
+    # Top metrics row — all from artifact
     col1, col2, col3 = st.columns(3)
-    col1.metric("Total samples", "26,232")
-    col2.metric("Fake (approx.)", "60.6%")
-    col3.metric("Real (approx.)", "39.4%")
+    col1.metric("Total samples", f"{total:,}" if total is not None else "—")
+    col2.metric("Fake", f"{fake_pct:.1%}" if fake_pct else "—", help=f"Count: {fake_count:,}" if fake_count else None)
+    col3.metric("Real", f"{real_pct:.1%}" if real_pct else "—", help=f"Count: {real_count:,}" if real_count else None)
 
-    # Class distribution donut
+    # Class distribution donut — actual counts
     st.markdown("#### Class distribution")
-    fig_donut = plotly_donut_class_distribution(
-        counts=[FAKE_COUNT, REAL_COUNT],
-        labels=["Fake", "Real"],
-        colors=["#f87171", "#4ade80"],
-    )
-    st.plotly_chart(fig_donut, width="stretch")
+    if fake_count > 0 or real_count > 0:
+        fig_donut = plotly_donut_class_distribution(
+            counts=[fake_count, real_count],
+            labels=["Fake", "Real"],
+            colors=["#f87171", "#4ade80"],
+        )
+        st.plotly_chart(fig_donut, width="stretch")
+    else:
+        st.info("No class counts in evaluation results.")
 
-    # Text length distribution
+    # Text length distribution (illustrative when we don't load raw data)
     st.markdown("#### Text length distribution")
     st.caption("Illustrative; actual distributions from training notebook.")
     lengths_fake, lengths_real = _sample_text_lengths()

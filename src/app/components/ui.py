@@ -12,7 +12,7 @@ def page_header(title: str, subtitle: str = ""):
         st.markdown(
             f"""
             <div style="margin-bottom: 2rem;">
-                <h1 style="margin: 0; font-size: 1.75rem; font-weight: 600; color: #111827;">
+                <h1 style="margin: 0; font-size: 1.75rem; font-weight: 600; color: #374151;">
                     {title}
                 </h1>
                 <p style="margin: 0.5rem 0 0 0; color: #6b7280; font-size: 1rem;">

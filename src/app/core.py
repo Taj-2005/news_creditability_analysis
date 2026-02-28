@@ -1,12 +1,13 @@
 """
 Shared core for News Credibility dashboard: model loading, prediction, validation.
 No UI; used by all pages. Deployment-safe paths, cached model, error handling.
+Metrics and dataset stats are loaded from model/evaluation_results.json when available.
 """
 
 import logging
 import sys
 from pathlib import Path
-from typing import Tuple
+from typing import Any, Dict, Optional, Tuple
 
 repo_root = Path(__file__).resolve().parent.parent.parent
 if str(repo_root) not in sys.path:
@@ -14,6 +15,11 @@ if str(repo_root) not in sys.path:
 
 import streamlit as st
 
+from src.evaluation.results_loader import (
+    artifact_available,
+    get_dataset_stats,
+    get_metrics,
+)
 from src.features.preprocessing import clean_text
 
 logger = logging.getLogger("news_credibility_app")
@@ -27,29 +33,29 @@ PAGE_TITLE = "News Credibility AI"
 MODEL_ALGORITHM = "Logistic Regression"
 MODEL_FEATURES = "TF-IDF (unigrams + bigrams)"
 DATASET_NAME = "BharatFakeNewsKosh"
-DATASET_SIZE = "26,000+"
+# Dataset size and metrics come from evaluation_results.json when available
 MIN_INPUT_LENGTH = 10
 MAX_INPUT_LENGTH = 50_000
 
-# Expected metrics (from README / training) for dashboard when no eval artifacts
-EXPECTED_METRICS = {
-    "Logistic Regression": {
-        "Accuracy": 0.87,
-        "Precision": 0.88,
-        "Recall": 0.90,
-        "F1 Score": 0.89,
-        "ROC-AUC": 0.93,
-        "CV F1": (0.88, 0.01),
-    },
-    "Decision Tree": {
-        "Accuracy": 0.80,
-        "Precision": 0.81,
-        "Recall": 0.84,
-        "F1 Score": 0.82,
-        "ROC-AUC": 0.80,
-        "CV F1": (0.81, 0.02),
-    },
-}
+
+def get_dataset_size_str() -> str:
+    """Return dataset size string from evaluation artifact, or placeholder if missing."""
+    stats = get_dataset_stats()
+    if stats and "dataset_size_str" in stats:
+        return stats["dataset_size_str"]
+    if stats and "total_samples" in stats:
+        return f"{stats['total_samples']:,}"
+    if stats and "after_drop_empty" in stats:
+        return f"{stats['after_drop_empty']:,}"
+    return "—"  # Placeholder when artifact not generated yet
+
+
+def get_expected_metrics() -> Optional[Dict[str, Dict[str, Any]]]:
+    """
+    Return per-model metrics from evaluation_results.json.
+    None if artifact is missing (caller should show "Run notebook/script to generate results").
+    """
+    return get_metrics()
 
 EXAMPLE_TEXTS = {
     "Real (credible)": (

@@ -146,6 +146,7 @@ def plotly_confusion_heatmap_reference(
     """
     Approximate confusion matrix from accuracy, precision, recall.
     Assumes binary: 0 = Real, 1 = Fake. Derives TN, FP, FN, TP.
+    Use plotly_confusion_heatmap_from_matrix when real CM is available.
     """
     if labels is None:
         labels = ["Real", "Fake"]
@@ -160,6 +161,34 @@ def plotly_confusion_heatmap_reference(
     fp = min(fp, 500)
     tn = 500 - fp
     cm = np.array([[tn, fp], [fn, tp]])
+    return _heatmap_figure(cm, labels, model_name, height)
+
+
+def plotly_confusion_heatmap_from_matrix(
+    cm: List[List[int]],
+    model_name: str,
+    labels: List[str] = None,
+    height: int = 340,
+) -> go.Figure:
+    """
+    Confusion matrix heatmap from actual 2x2 matrix (e.g. from evaluation_results.json).
+    cm: [[TN, FP], [FN, TP]] for binary Real=0, Fake=1.
+    """
+    if labels is None:
+        labels = ["Real", "Fake"]
+    arr = np.array(cm)
+    if arr.shape != (2, 2):
+        raise ValueError("Confusion matrix must be 2x2")
+    return _heatmap_figure(arr, labels, model_name, height)
+
+
+def _heatmap_figure(
+    cm: np.ndarray,
+    labels: List[str],
+    model_name: str,
+    height: int,
+) -> go.Figure:
+    """Shared heatmap layout for confusion matrix."""
     fig = go.Figure(
         data=go.Heatmap(
             z=cm,

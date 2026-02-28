@@ -3,9 +3,11 @@
 import streamlit as st
 
 from src.app.components.ui import page_header
-from src.app.core import EXPECTED_METRICS, load_model
+from src.app.core import get_expected_metrics, load_model
+from src.evaluation.results_loader import get_confusion_matrices
 from src.evaluation.plotly_viz import (
     get_lr_feature_importance,
+    plotly_confusion_heatmap_from_matrix,
     plotly_confusion_heatmap_reference,
     plotly_cv_boxplot_reference,
     plotly_metric_comparison_bar,
@@ -21,14 +23,24 @@ def render():
         "Logistic Regression vs Decision Tree on the same TF-IDF features and stratified split.",
     )
 
-    # Model selector for single-model charts (ROC, PR, Confusion)
-    model_names = list(EXPECTED_METRICS.keys())
+    metrics = get_expected_metrics()
+    if not metrics:
+        st.warning(
+            "Evaluation results not found. Run the notebook (with the dataset) or "
+            "`python scripts/run_evaluation.py` to generate metrics."
+        )
+        st.stop()
+
+    model_names = list(metrics.keys())
     selected = st.radio("Show curves for", model_names, horizontal=True, key="model_select")
+
+    m = metrics.get(selected)
+    if not m:
+        st.stop()
 
     # Row 1: ROC + PR
     c1, c2 = st.columns(2)
     with c1:
-        m = EXPECTED_METRICS[selected]
         fig_roc = plotly_roc_reference(selected, m["ROC-AUC"])
         st.plotly_chart(fig_roc, width="stretch")
     with c2:
@@ -37,20 +49,25 @@ def render():
         )
         st.plotly_chart(fig_pr, width="stretch")
 
-    # Row 2: Confusion matrix + Metric comparison bar
+    # Row 2: Confusion matrix (real from artifact when available) + Metric comparison bar
     c3, c4 = st.columns(2)
+    confusion_matrices = get_confusion_matrices()
     with c3:
-        fig_cm = plotly_confusion_heatmap_reference(
-            m["Accuracy"], m["Precision"], m["Recall"], selected
-        )
+        cm = confusion_matrices.get(selected) if confusion_matrices else None
+        if cm and len(cm) == 2 and len(cm[0]) == 2 and len(cm[1]) == 2:
+            fig_cm = plotly_confusion_heatmap_from_matrix(cm, selected)
+        else:
+            fig_cm = plotly_confusion_heatmap_reference(
+                m["Accuracy"], m["Precision"], m["Recall"], selected
+            )
         st.plotly_chart(fig_cm, width="stretch")
     with c4:
-        fig_bar = plotly_metric_comparison_bar(EXPECTED_METRICS)
+        fig_bar = plotly_metric_comparison_bar(metrics)
         st.plotly_chart(fig_bar, width="stretch")
 
     # CV distribution boxplot
     st.markdown("#### Cross-validation F1 distribution")
-    fig_cv = plotly_cv_boxplot_reference(EXPECTED_METRICS)
+    fig_cv = plotly_cv_boxplot_reference(metrics)
     st.plotly_chart(fig_cv, width="stretch")
 
     # Commentary

@@ -21,6 +21,7 @@ if str(repo_root) not in sys.path:
 import streamlit as st
 
 from src.features.preprocessing import clean_text
+from src.evaluation.results_loader import get_dataset_stats
 
 # -----------------------------------------------------------------------------
 # Logging (production reliability)
@@ -47,7 +48,18 @@ PAGE_SUBTITLE = "Intelligent misinformation detection using classical NLP & mach
 MODEL_ALGORITHM = "Logistic Regression"
 MODEL_FEATURES = "TF-IDF (unigrams + bigrams)"
 DATASET_NAME = "BharatFakeNewsKosh"
-DATASET_SIZE = "26,000+"
+
+
+def _dataset_size_str() -> str:
+    """Dataset size from evaluation_results.json if available."""
+    stats = get_dataset_stats()
+    if stats and "dataset_size_str" in stats:
+        return stats["dataset_size_str"]
+    if stats and "total_samples" in stats:
+        return f"{stats['total_samples']:,}"
+    if stats and "after_drop_empty" in stats:
+        return f"{stats['after_drop_empty']:,}"
+    return "—"
 
 EXAMPLE_TEXTS = {
     "Real (credible)": (
@@ -153,10 +165,10 @@ def render_header() -> None:
         """
         <div style="
             padding: 1rem 0 1.5rem 0;
-            border-bottom: 1px solid rgba(49, 51, 63, 0.2);
+            border-bottom: 1px solid #e5e7eb;
             margin-bottom: 1.5rem;
         ">
-            <h1 style="margin: 0; font-size: 2rem;">📰 News Credibility Analyzer</h1>
+            <h1 style="margin: 0; font-size: 2rem; color: #374151;">📰 News Credibility Analyzer</h1>
             <p style="margin: 0.5rem 0 0 0; color: #6b7280; font-size: 1rem;">
                 """ + PAGE_SUBTITLE + """
             </p>
@@ -246,7 +258,7 @@ def render_output_section(prediction: int, fake_prob: float, real_prob: float) -
     # Model metadata inline
     st.caption(
         f"Algorithm: {MODEL_ALGORITHM} · Features: {MODEL_FEATURES} · "
-        f"Trained on {DATASET_NAME} ({DATASET_SIZE} articles)"
+        f"Trained on {DATASET_NAME} ({_dataset_size_str()} articles)"
     )
 
 
@@ -256,7 +268,7 @@ def render_about_model() -> None:
         st.markdown(
             f"""
             - **Algorithm:** {MODEL_ALGORITHM} with **{MODEL_FEATURES}**
-            - **Dataset:** {DATASET_NAME} — {DATASET_SIZE} fact-checked Indian news articles
+            - **Dataset:** {DATASET_NAME} — {_dataset_size_str()} fact-checked Indian news articles
             - **Task:** Binary classification (Fake vs Real)
             - **Preprocessing:** Lowercasing, URL/mention removal, stopword removal, WordNet lemmatization
             - **Output:** Probability score for "Fake"; higher value = higher risk of misinformation
