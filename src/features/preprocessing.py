@@ -67,6 +67,40 @@ def clean_text(
 
 def prepare_text_column(
     df: pd.DataFrame,
+    text_column: str = "combined_text",
+    label_column: str = "label",
+    cleaned_col: str = "cleaned_text",
+    drop_empty: bool = True,
+) -> pd.DataFrame:
+    """
+    Add cleaned text column to the DataFrame (e.g. after load_dataset).
+
+    Used for the Kaggle Fake and Real News dataset: combined_text -> cleaned_text,
+    label already present.
+
+    Args:
+        df: DataFrame with text_column and label_column.
+        text_column: Column containing raw or combined text to clean.
+        label_column: Name of the binary label column (0=Real, 1=Fake).
+        cleaned_col: Name for the cleaned text column.
+        drop_empty: If True, drop rows where cleaned text is empty.
+
+    Returns:
+        DataFrame with new cleaned_col; optionally with empty-text rows removed.
+    """
+    df = df.copy()
+    if text_column not in df.columns:
+        raise KeyError(f"Text column '{text_column}' not in DataFrame")
+    df[cleaned_col] = df[text_column].apply(clean_text)
+
+    if drop_empty:
+        df = df[df[cleaned_col].str.strip() != ""].reset_index(drop=True)
+    return df
+
+
+# Legacy signature for BharatFakeNewsKosh (statement + body); kept for any backward compat.
+def prepare_text_column_legacy(
+    df: pd.DataFrame,
     statement_col: str = "Eng_Trans_Statement",
     body_col: str = "Eng_Trans_News_Body",
     label_col: str = "Label",
@@ -76,28 +110,19 @@ def prepare_text_column(
     drop_empty: bool = True,
 ) -> pd.DataFrame:
     """
-    Add combined text, cleaned text, and numeric label to the DataFrame.
-
-    Args:
-        df: Raw DataFrame with statement and body columns.
-        statement_col: Column for headline/statement.
-        body_col: Column for news body.
-        label_col: Boolean label column (True=Fake, False=Real).
-        combined_col: Name for combined text column.
-        cleaned_col: Name for cleaned text column.
-        output_label_col: Name for numeric label (0=Real, 1=Fake).
-        drop_empty: If True, drop rows where cleaned text is empty.
-
-    Returns:
-        DataFrame with new columns; optionally with empty-text rows removed.
+    Add combined text, cleaned text, and numeric label (legacy Excel dataset).
+    Prefer prepare_text_column for the Kaggle Fake/Real News dataset.
     """
     df = df.copy()
-    df[combined_col] = (
-        df[statement_col].fillna("") + " " + df[body_col].fillna("")
-    )
+    if statement_col in df.columns and body_col in df.columns:
+        df[combined_col] = (
+            df[statement_col].fillna("") + " " + df[body_col].fillna("")
+        )
+    else:
+        raise KeyError(f"Columns {statement_col} or {body_col} not in DataFrame")
     df[cleaned_col] = df[combined_col].apply(clean_text)
-    df[output_label_col] = df[label_col].astype(int)
-
+    if label_col in df.columns:
+        df[output_label_col] = df[label_col].astype(int)
     if drop_empty:
         df = df[df[cleaned_col].str.strip() != ""].reset_index(drop=True)
     return df

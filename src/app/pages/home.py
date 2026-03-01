@@ -7,23 +7,24 @@ from src.app.core import (
     DATASET_NAME,
     get_dataset_size_str,
     get_expected_metrics,
+    get_model_algorithm_display,
     PAGE_TITLE,
 )
 
 
 def render():
     page_header(
-        "AI-Powered Misinformation Detection",
-        "News Credibility Classification · BharatFakeNewsKosh · Classical NLP & ML",
+        "News Credibility Analyzer",
+        "This system detects whether a news article is **Fake** or **Real** using machine learning. Trained on the Kaggle Fake and Real News dataset with classical NLP (TF-IDF) and interpretable classifiers.",
     )
 
-    # Problem statement card
-    st.markdown("#### Problem")
+    # Problem statement
+    st.markdown("#### What it does")
     st.markdown(
-        "Misinformation spreads faster than manual fact-checking can scale. This platform provides **automated binary classification** of news as **Fake** or **Real**, using a reproducible ML pipeline and a deployment-ready dashboard — interpretable models, no LLMs, no GPU."
+        "Misinformation spreads faster than manual fact-checking can scale. This app provides **automated binary classification** of news as **Fake** or **Real**, using a reproducible ML pipeline — interpretable models, no LLMs, no GPU."
     )
 
-    # KPI section: big metric cards (from evaluation_results.json)
+    # KPI section: use best model metrics when available
     metrics = get_expected_metrics()
     if not metrics:
         st.warning(
@@ -32,9 +33,10 @@ def render():
         )
         st.stop()
 
-    lr = metrics.get("Logistic Regression")
+    best_name = get_model_algorithm_display()
+    lr = metrics.get(best_name) or metrics.get("Logistic Regression") or next(iter(metrics.values()), None)
     if not lr:
-        st.warning("Logistic Regression metrics missing in evaluation results.")
+        st.warning("No model metrics found in evaluation results.")
         st.stop()
 
     st.markdown("#### Key performance metrics")
@@ -74,7 +76,10 @@ def render():
         st.metric("Articles", get_dataset_size_str())
     with d3:
         st.metric("Task", "Fake vs Real (binary)")
-    st.caption("English-translated headlines and bodies from Indian fact-checked news.")
+    st.caption(
+        "Dataset: **Fake and Real News** — "
+        "https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset"
+    )
 
     # Product pitch
     st.markdown("---")

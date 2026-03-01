@@ -13,7 +13,7 @@ if str(repo_root) not in sys.path:
 import streamlit as st
 
 from src.app.components.styles import inject_app_css
-from src.app.core import MODEL_ALGORITHM, PAGE_TITLE
+from src.app.core import get_model_algorithm_display, PAGE_TITLE
 from src.app.pages import (
     architecture,
     dataset_insights,
@@ -48,8 +48,8 @@ def run():
         st.markdown(
             """
             <div style="margin-bottom: 0.5rem;">
-                <p style="font-size: 1rem; font-weight: 600; color: #374151; margin: 0;">News Credibility AI</p>
-                <p style="font-size: 0.75rem; color: #6b7280; margin: 0.25rem 0 0 0;">Misinformation detection</p>
+                <p style="font-size: 1rem; font-weight: 600; color: #374151; margin: 0;">News Credibility Analyzer</p>
+                <p style="font-size: 0.75rem; color: #6b7280; margin: 0.25rem 0 0 0;">Fake vs Real news detection</p>
             </div>
             """,
             unsafe_allow_html=True,
@@ -63,8 +63,12 @@ def run():
             key="nav_radio",
         )
         st.markdown("---")
-        st.caption(f"Model · {MODEL_ALGORITHM}")
+        st.caption(f"Model · {get_model_algorithm_display()}")
         st.caption(f"v{APP_VERSION}")
+        st.markdown("---")
+        st.caption(
+            "**Dataset:** [Fake and Real News](https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset)"
+        )
 
     # Render selected page
     PAGES[page][1]()

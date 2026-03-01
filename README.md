@@ -7,7 +7,7 @@
 [![Python](https://img.shields.io/badge/Python-3.8%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![scikit-learn](https://img.shields.io/badge/scikit--learn-1.x-F7931E?style=flat-square&logo=scikitlearn&logoColor=white)](https://scikit-learn.org)
 [![Streamlit](https://img.shields.io/badge/Streamlit-Deployed-FF4B4B?style=flat-square&logo=streamlit&logoColor=white)](https://streamlit.io)
-[![Dataset](https://img.shields.io/badge/Dataset-BharatFakeNewsKosh-6366F1?style=flat-square)](https://bharatfakenewskosh)
+[![Dataset](https://img.shields.io/badge/Dataset-Fake%20%26%20Real%20News-6366F1?style=flat-square)](https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset)
 
 **Project 11 · Milestone 1 · AI/ML Systems**
 
@@ -21,20 +21,19 @@
 
 Misinformation spreads faster than manual fact-checking can scale. This project builds an **end-to-end, production-structured ML pipeline** that automatically classifies news articles as **Fake** or **Real** using classical NLP techniques — no LLMs, no GPU required.
 
-Trained on **26,000+ fact-checked Indian news articles** from the [BharatFakeNewsKosh](https://www.kaggle.com/datasets/man2191989/bharatfakenewskosh) dataset, the system uses TF-IDF vectorization paired with Logistic Regression and Decision Tree classifiers, wrapped in a clean sklearn `Pipeline` and served through a Streamlit web application.
+Trained on the **[Fake and Real News Dataset](https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset)** (Kaggle: clmentbisaillon/fake-and-real-news-dataset). The system uses TF-IDF vectorization (unigrams + bigrams) paired with Logistic Regression and Decision Tree classifiers, wrapped in a clean sklearn `Pipeline` and served through a Streamlit web application.
 
 **This is Milestone 1** of a two-phase project. Milestone 2 extends the system into a LangGraph-based agentic AI assistant with RAG-powered fact-checking.
 
 ### Problem Statement
 
 
-| Challenge                                 | Scale                         |
-| ----------------------------------------- | ----------------------------- |
-| News articles fact-checked daily in India | 100s per day                  |
-| Manual verification bottleneck            | Hours per article             |
-| Dataset size (BharatFakeNewsKosh)         | 26,232 articles               |
-| Languages covered                         | 9 (Hindi, Tamil, English, …) |
-| Class distribution                        | 60.6% Fake · 39.4% Real      |
+| Challenge                     | Scale        |
+| ----------------------------- | ------------ |
+| Fake and Real News (Kaggle)   | 40,000+ rows |
+| Class distribution            | ~50% Fake · ~50% Real |
+| Data format                   | CSV (Fake.csv, True.csv) |
+| Text                          | Title + article body (English) |
 
 ---
 
@@ -60,21 +59,22 @@ Trained on **26,000+ fact-checked Indian news articles** from the [BharatFakeNew
 
                                     DATA SOURCE
                            ───────────────────────────
-                             BharatFakeNewsKosh Dataset
-                       (Eng_Trans_Statement + News_Body + Label)
+                    Kaggle Fake and Real News Dataset
+                  (dataset/Fake.csv + True.csv → title + text, label)
 
 
 ╔══════════════════════════════════════ TRAINING PIPELINE ══════════════════════════════════════╗
 
         ┌────────────────────┐
         │   Data Loading     │
-        │  Excel → DataFrame │
+        │ dataset/Fake.csv   │
+        │ dataset/True.csv   │
         └─────────┬──────────┘
                   ▼
         ┌────────────────────┐
         │ Text Preparation   │
-        │ Merge statement +  │
-        │ article body       │
+        │ Merge title + text │
+        │ Label: Fake=1, Real=0
         └─────────┬──────────┘
                   ▼
         ┌──────────────────────────────────────────┐
@@ -90,8 +90,8 @@ Trained on **26,000+ fact-checked Indian news articles** from the [BharatFakeNew
         ┌──────────────────────────────────────────┐
         │        Feature Engineering (TF-IDF)      │
         │------------------------------------------│
-        │ • 15K max features                       │
-        │ • Unigrams + Bigrams                     │
+        │ • 25K (LR) / 15K (DT) max features      │
+        │ • Unigrams + Bigrams (1, 2)             │
         │ • Sublinear TF scaling                   │
         └─────────┬────────────────────────────────┘
                   ▼
@@ -159,8 +159,8 @@ Trained on **26,000+ fact-checked Indian news articles** from the [BharatFakeNew
 
 | Stage         | Input                     | Output                                         | Module                          |
 | ------------- | ------------------------- | ---------------------------------------------- | ------------------------------- |
-| **Load**      | `bharatfakenewskosh.xlsx` | Raw DataFrame                                  | `src/data/loader.py`            |
-| **Prepare**   | Raw DataFrame             | `combined_text`, `cleaned_text`, `label` (0/1) | `src/features/preprocessing.py` |
+| **Load**      | `dataset/Fake.csv`, `dataset/True.csv` | Merged DataFrame, label (Fake=1, Real=0) | `src/data/loader.py` |
+| **Prepare**   | Combined title+text                   | `cleaned_text`, `label` (0/1)           | `src/features/preprocessing.py` |
 | **Split**     | X (text), y (label)       | Stratified 80/20 train/test sets               | `sklearn.model_selection`       |
 | **Vectorize** | Text series               | Sparse TF-IDF matrix                           | `Pipeline` (fit on train only)  |
 | **Train**     | TF-IDF matrix + labels    | Fitted Pipeline artifact                       | `src/models/pipelines.py`       |
@@ -180,12 +180,17 @@ GenAI/
 ├── ARCHITECTURE.md                    # Detailed system design docs
 ├── requirements.txt                   # Pinned dependencies
 │
-├── news_credibility.ipynb             # Main training + evaluation notebook
+├── notebook/
+│   └── news_credibility.ipynb          # Main training + evaluation notebook
 ├── app.py                             # Streamlit app entry point
 │
-├── bharatfakenewskosh.xlsx            # Dataset (add locally; excluded from VCS if >50MB)
+├── dataset/
+│   ├── Fake.csv                       # Kaggle fake news (add after download)
+│   └── True.csv                       # Kaggle real news
 ├── model/
-│   └── pipeline.pkl                   # Serialized sklearn Pipeline (post-training; see note below)
+│   ├── pipeline.pkl                   # Serialized sklearn Pipeline (post-training; see note below)
+│   └── evaluation_results.json       # Dataset stats + metrics (from notebook or script)
+├── plots/                             # Optional: figures saved by notebook (EDA, ROC, comparison)
 │
 └── src/
     ├── __init__.py
@@ -232,20 +237,21 @@ pip install -r requirements.txt
 
 ### 3. Add the dataset
 
-Place `bharatfakenewskosh.xlsx` in the project root. The file must contain:
+Download the [Fake and Real News Dataset](https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset) from Kaggle, then place **Fake.csv** and **True.csv** inside the **dataset/** folder:
 
+```
+dataset/
+├── Fake.csv
+└── True.csv
+```
 
-| Column                | Type | Description                               |
-| --------------------- | ---- | ----------------------------------------- |
-| `Eng_Trans_Statement` | str  | English translation of the claim/headline |
-| `Eng_Trans_News_Body` | str  | English translation of the news body      |
-| `Label`               | bool | `True` = Fake, `False` = Real             |
+Columns used: `title`, `text`. Labels: Fake=1, Real=0 (assigned automatically by the loader).
 
 ### 4. Train the model
 
 ```bash
-jupyter notebook news_credibility.ipynb
-# Run all cells — model saves to model/pipeline.pkl
+jupyter notebook notebook/news_credibility.ipynb
+# Run all cells — model saves to model/pipeline.pkl, plots to plots/ (at repo root)
 ```
 
 ### 5. Launch the app
@@ -294,10 +300,10 @@ def clean_text(text: str) -> str:
 
 | Hyperparameter | Logistic Regression | Decision Tree |
 | -------------- | ------------------- | ------------- |
-| `max_features` | 15,000              | 10,000        |
+| `max_features` | 25,000              | 15,000        |
 | `ngram_range`  | (1, 2)              | (1, 2)        |
-| `min_df`       | 3                   | 3             |
-| `max_df`       | 0.90                | 0.90          |
+| `min_df`       | 2                   | 2             |
+| `max_df`       | 0.92                | 0.92          |
 | `sublinear_tf` | True                | True          |
 
 ### Stage 3 — Classification
@@ -305,7 +311,7 @@ def clean_text(text: str) -> str:
 
 | Model                   | Key Hyperparameters                                               | Rationale                                                                     |
 | ----------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| **Logistic Regression** | `C=1.0`, `class_weight='balanced'`, `solver='lbfgs'`              | Interpretable coefficients; calibrated probabilities; handles class imbalance |
+| **Logistic Regression** | `C=2.0`, `class_weight='balanced'`, `solver='lbfgs'`   | Interpretable coefficients; calibrated probabilities; handles class imbalance |
 | **Decision Tree**       | `max_depth=25`, `min_samples_split=10`, `class_weight='balanced'` | Non-linear splits; depth-limited to reduce overfitting                        |
 
 All stages are encapsulated in a single sklearn `Pipeline` object so the vectorizer is fit **only on training data** and the same vocabulary is used at inference time.
@@ -330,17 +336,17 @@ print(f"5-Fold CV F1: {cv_scores.mean():.4f} ± {cv_scores.std():.4f}")
 
 ## Results
 
-> Results shown below are expected based on dataset characteristics. Exact numbers populate after running the notebook.
+> Results are produced by running the notebook or `python scripts/run_evaluation.py`. The dashboard loads them from **model/evaluation_results.json**.
 
 
 | Metric               | Logistic Regression | Decision Tree |
 | -------------------- | ------------------- | ------------- |
-| **Accuracy**         | ~0.87               | ~0.80         |
-| **Precision (Fake)** | ~0.88               | ~0.81         |
-| **Recall (Fake)**    | ~0.90               | ~0.84         |
-| **F1 Score (Fake)**  | ~0.89               | ~0.82         |
-| **ROC-AUC**          | ~0.93               | ~0.80         |
-| **5-Fold CV F1**     | ~0.88 ± 0.01       | ~0.81 ± 0.02 |
+| **Accuracy**         | High (>90% typical) | Competitive   |
+| **Precision (Fake)** | Strong              | Strong        |
+| **Recall (Fake)**    | Strong              | Strong        |
+| **F1 Score (Fake)**  | Primary target      | Primary target|
+| **ROC-AUC**          | High                | Good          |
+| **5-Fold CV F1**     | Stable              | Stable        |
 
 **Why Logistic Regression outperforms Decision Tree on text data:**
 TF-IDF produces high-dimensional sparse features where linear separability is strong. LR exploits this directly via a linear decision boundary, while Decision Trees must construct many splits to approximate the same boundary, leading to overfitting.
@@ -401,12 +407,12 @@ The Streamlit dashboard shows **dataset statistics** and **model metrics** (accu
 
 **To generate the artifact:**
 
-1. **From the notebook** — Run `news_credibility.ipynb` from top to bottom. The final section **Validation & Export** computes dataset stats, runs sanity checks, and writes `model/evaluation_results.json`.
-2. **From the command line** — With the dataset file `bharatfakenewskosh.xlsx` in `data/`, `notebooks/`, or the repo root, run:
+1. **From the notebook** — Run `notebook/news_credibility.ipynb` from top to bottom. The final section saves `model/evaluation_results.json`, `model/pipeline.pkl`, and optional plots under `plots/` (all paths at repo root).
+2. **From the command line** — With **Fake.csv** and **True.csv** in the **dataset/** folder, run:
    ```bash
    python scripts/run_evaluation.py
    ```
-   This loads the data, trains both models, evaluates on the stratified test set, runs the same sanity checks, and saves `model/evaluation_results.json`.
+   This loads the data, trains both models, evaluates on the stratified test set, and saves `model/evaluation_results.json` and `model/pipeline.pkl`.
 
 If the artifact is missing, the Overview, Dataset Intelligence, and Model Comparison pages show a clear message asking you to run the notebook or script. **No hardcoded or stale metrics are shown.**
 
@@ -464,7 +470,7 @@ pandas>=2.0
 numpy>=1.24
 nltk>=3.8
 joblib>=1.3
-openpyxl>=3.1
+plotly>=5.0
 ```
 
 ---
@@ -474,8 +480,8 @@ openpyxl>=3.1
 
 | Area            | Limitation                                                                                   |
 | --------------- | -------------------------------------------------------------------------------------------- |
-| **Language**    | Preprocessing uses English NLTK resources; relies on English-translated columns              |
-| **Domain**      | Trained on Indian fact-checked news; may not generalize to other regions or domains          |
+| **Language**    | Preprocessing uses English NLTK resources; dataset is English (title + text)     |
+| **Domain**      | Trained on Kaggle Fake and Real News; may not generalize to other domains       |
 | **Task**        | Binary classification only (Fake/Real); no multi-label (satire, misleading, out-of-context)  |
 | **Temporal**    | Random train/test split; performance may be overstated if distribution shifts over time      |
 | **Model**       | Classical TF-IDF + LR/DT; not state-of-the-art versus fine-tuned transformer classifiers     |

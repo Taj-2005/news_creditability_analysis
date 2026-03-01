@@ -44,10 +44,10 @@ MODEL_DIR_NAME = "model"
 MODEL_FILENAME = "pipeline.pkl"
 
 PAGE_TITLE = "News Credibility Analyzer"
-PAGE_SUBTITLE = "Intelligent misinformation detection using classical NLP & machine learning"
+PAGE_SUBTITLE = "Detects whether a news article is Fake or Real using machine learning"
 MODEL_ALGORITHM = "Logistic Regression"
 MODEL_FEATURES = "TF-IDF (unigrams + bigrams)"
-DATASET_NAME = "BharatFakeNewsKosh"
+DATASET_NAME = "Fake and Real News (Kaggle)"
 
 
 def _dataset_size_str() -> str:
@@ -62,16 +62,17 @@ def _dataset_size_str() -> str:
     return "—"
 
 EXAMPLE_TEXTS = {
-    "Real (credible)": (
-        "Prime Minister Modi received an honorary doctorate from Oxford University "
-        "in recognition of India's digital transformation initiatives and governance reforms."
+    "Government policy": (
+        "Government announces new policy affecting global trade. "
+        "Officials say the measures will take effect next quarter and could reshape supply chains."
     ),
-    "Fake (misinformation)": (
-        "Viral video claims to show a digitally edited flood in Rajasthan designed "
-        "to mislead viewers about the actual situation. Fact-checkers have debunked the clip."
+    "Scientists breakthrough": (
+        "Scientists discover breakthrough treatment for cancer. "
+        "Clinical trials show significant improvement in patient outcomes, with minimal side effects."
     ),
-    "Short headline": (
-        "Breaking: Scientists announce breakthrough in renewable energy storage technology."
+    "Conspiracy sample": (
+        "Secret government weather control project exposed. "
+        "Whistleblower reveals classified program allegedly used to manipulate natural disasters."
     ),
 }
 
@@ -126,13 +127,14 @@ def run_prediction(pipeline, raw_text: str) -> Tuple[int, float, float]:
 
     Returns:
         (prediction, fake_probability, real_probability)
-        prediction: 0 = Real, 1 = Fake
+        prediction: 0 = Fake, 1 = Real
     """
     cleaned = clean_text(raw_text)
     prediction = int(pipeline.predict([cleaned])[0])
     proba = pipeline.predict_proba([cleaned])[0]
-    real_prob = float(proba[0])
-    fake_prob = float(proba[1])
+    # Class 0 = Fake, Class 1 = Real
+    fake_prob = float(proba[0])
+    real_prob = float(proba[1])
     return prediction, fake_prob, real_prob
 
 
@@ -173,7 +175,7 @@ def render_header() -> None:
                 """ + PAGE_SUBTITLE + """
             </p>
             <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #9ca3af;">
-                Project 11 · Milestone 1 · BharatFakeNewsKosh Dataset
+                Project 11 · Milestone 1 · Fake and Real News Dataset
             </p>
         </div>
         """,
@@ -203,16 +205,16 @@ def render_input_section() -> Tuple[str, bool]:
     st.markdown("**Load example:**")
     ex1, ex2, ex3, _ = st.columns(4)
     with ex1:
-        if st.button("Example: Real", key="ex_real", use_container_width=True):
-            st.session_state["example_fill_key"] = "Real (credible)"
+        if st.button("Government policy...", key="ex_real", use_container_width=True):
+            st.session_state["example_fill_key"] = "Government policy"
             st.rerun()
     with ex2:
-        if st.button("Example: Fake", key="ex_fake", use_container_width=True):
-            st.session_state["example_fill_key"] = "Fake (misinformation)"
+        if st.button("Scientists breakthrough...", key="ex_fake", use_container_width=True):
+            st.session_state["example_fill_key"] = "Scientists breakthrough"
             st.rerun()
     with ex3:
-        if st.button("Example: Headline", key="ex_short", use_container_width=True):
-            st.session_state["example_fill_key"] = "Short headline"
+        if st.button("Conspiracy sample...", key="ex_short", use_container_width=True):
+            st.session_state["example_fill_key"] = "Conspiracy sample"
             st.rerun()
 
     col_btn1, col_btn2, _ = st.columns([1, 1, 3])
@@ -232,8 +234,8 @@ def render_output_section(prediction: int, fake_prob: float, real_prob: float) -
     """Render verdict, metrics, and confidence bar. Color-coded: Green = Real, Red = Fake."""
     st.markdown("### 📊 Result")
 
-    # Color-coded verdict
-    if prediction == 1:
+    # Color-coded verdict (0 = Fake, 1 = Real)
+    if prediction == 0:
         verdict_text = "Likely **FAKE** / Misinformation"
         verdict_icon = "🔴"
         st.error(f"{verdict_icon} Verdict: {verdict_text}")
@@ -249,7 +251,7 @@ def render_output_section(prediction: int, fake_prob: float, real_prob: float) -
     with col2:
         st.metric("Real probability", f"{real_prob:.1%}")
     with col3:
-        confidence = fake_prob if prediction == 1 else real_prob
+        confidence = fake_prob if prediction == 0 else real_prob
         st.metric("Model confidence", f"{confidence:.1%}")
 
     st.markdown("**Credibility risk score** (higher = more likely fake)")
@@ -268,7 +270,7 @@ def render_about_model() -> None:
         st.markdown(
             f"""
             - **Algorithm:** {MODEL_ALGORITHM} with **{MODEL_FEATURES}**
-            - **Dataset:** {DATASET_NAME} — {_dataset_size_str()} fact-checked Indian news articles
+            - **Dataset:** {DATASET_NAME} — {_dataset_size_str()} articles (title + text)
             - **Task:** Binary classification (Fake vs Real)
             - **Preprocessing:** Lowercasing, URL/mention removal, stopword removal, WordNet lemmatization
             - **Output:** Probability score for "Fake"; higher value = higher risk of misinformation
@@ -279,9 +281,13 @@ def render_about_model() -> None:
 
 
 def render_footer() -> None:
-    """Footer caption."""
+    """Footer with dataset attribution."""
     st.divider()
-    st.caption("Project 11 · Intelligent News Credibility Analysis · Milestone 1")
+    st.markdown(
+        "**Dataset source:** [Fake and Real News Dataset](https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset) · "
+        "Kaggle (clmentbisaillon)"
+    )
+    st.caption("News Credibility Analyzer · Machine learning for Fake vs Real news detection")
 
 
 # -----------------------------------------------------------------------------

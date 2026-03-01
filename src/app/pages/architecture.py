@@ -13,8 +13,8 @@ def render():
     st.markdown(
         """
         ```
-        DATA SOURCE (BharatFakeNewsKosh)
-            → Load & prepare text (statement + body)
+        DATA SOURCE (Kaggle Fake and Real News)
+            → dataset/Fake.csv + True.csv → merge, label (Fake=1, Real=0), title + text
             → Preprocess (lowercase, URLs/mentions removed, stopwords, lemmatize)
             → TF-IDF (unigrams + bigrams)
             → Train: Logistic Regression / Decision Tree (sklearn Pipeline)

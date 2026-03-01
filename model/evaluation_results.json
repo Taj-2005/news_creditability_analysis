@@ -1,65 +1,83 @@
 {
   "dataset_stats": {
-    "total_samples": 26232,
-    "after_drop_empty": 26232,
-    "train_size": 20985,
-    "test_size": 5247,
+    "total_samples": 39100,
+    "after_drop_empty": 39100,
+    "train_size": 31280,
+    "test_size": 7820,
     "class_counts": {
-      "Fake": 15913,
-      "Real": 10319
-    },
-    "class_pct": {
-      "Fake": 0.6066,
-      "Real": 0.3934
+      "Fake": 17903,
+      "Real": 21197
     }
   },
   "models": {
     "Logistic Regression": {
-      "Accuracy": 0.5516,
-      "Precision": 0.6413,
-      "Recall": 0.5916,
-      "F1 Score": 0.6155,
-      "ROC-AUC": 0.5593,
+      "Accuracy": 0.9921,
+      "Precision": 0.9897,
+      "Recall": 0.9958,
+      "F1 Score": 0.9927,
+      "ROC-AUC": 0.9994,
       "confusion_matrix": [
         [
-          1011,
-          1053
+          3537,
+          44
         ],
         [
-          1300,
-          1883
+          18,
+          4221
         ]
-      ],
-      "CV F1": [
-        0.5817,
-        0.0548
       ]
     },
-    "Decision Tree": {
-      "Accuracy": 0.592,
-      "Precision": 0.613,
-      "Recall": 0.8878,
-      "F1 Score": 0.7253,
-      "ROC-AUC": 0.5199,
+    "Naive Bayes": {
+      "Accuracy": 0.9596,
+      "Precision": 0.9651,
+      "Recall": 0.9601,
+      "F1 Score": 0.9626,
+      "ROC-AUC": 0.9922,
       "confusion_matrix": [
         [
-          280,
-          1784
+          3434,
+          147
         ],
         [
-          357,
-          2826
+          169,
+          4070
         ]
-      ],
-      "CV F1": [
-        0.7244,
-        0.0084
+      ]
+    },
+    "Random Forest": {
+      "Accuracy": 0.9919,
+      "Precision": 0.989,
+      "Recall": 0.9962,
+      "F1 Score": 0.9926,
+      "ROC-AUC": 0.9995,
+      "confusion_matrix": [
+        [
+          3534,
+          47
+        ],
+        [
+          16,
+          4223
+        ]
+      ]
+    },
+    "SVM": {
+      "Accuracy": 0.9955,
+      "Precision": 0.9946,
+      "Recall": 0.9972,
+      "F1 Score": 0.9959,
+      "ROC-AUC": 0.9998,
+      "confusion_matrix": [
+        [
+          3558,
+          23
+        ],
+        [
+          12,
+          4227
+        ]
       ]
     }
   },
-  "split": {
-    "test_size": 5247,
-    "random_state": 42,
-    "stratify": true
-  }
+  "best_model": "SVM"
 }

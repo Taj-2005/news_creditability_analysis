@@ -4,5 +4,4 @@ pandas
 numpy
 nltk
 joblib
-openpyxl
 plotly

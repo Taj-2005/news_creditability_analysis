@@ -20,7 +20,7 @@ from src.evaluation.plotly_viz import (
 def render():
     page_header(
         "Model comparison",
-        "Logistic Regression vs Decision Tree on the same TF-IDF features and stratified split.",
+        "Compare all trained models (Logistic Regression, Naive Bayes, Random Forest, SVM) on the same TF-IDF features and stratified split.",
     )
 
     metrics = get_expected_metrics()
@@ -72,17 +72,16 @@ def render():
 
     # Commentary
     st.markdown("---")
-    st.markdown("#### Why Logistic Regression outperforms Decision Tree")
+    st.markdown("#### Model notes")
     st.markdown(
-        "TF-IDF produces high-dimensional sparse features where linear separability is strong. "
-        "Logistic Regression exploits this with a single linear boundary and benefits from L2 regularization. "
-        "Decision Trees must build many axis-aligned splits to approximate the same boundary, which leads to overfitting and higher variance. "
-        "For this task, LR is also more interpretable (coefficients per token) and is the model used in **Live Prediction Lab**."
+        "TF-IDF produces high-dimensional sparse features. Logistic Regression often performs well with a linear boundary and L2 regularization. "
+        "Naive Bayes is fast and interpretable; Random Forest and SVM offer alternative decision boundaries. "
+        "The **best model by F1** is saved and used in **Live Prediction Lab**."
     )
 
-    # Feature importance (LR only)
+    # Feature importance (LR or linear models with coef_)
     st.markdown("---")
-    st.markdown("#### Feature importance (Logistic Regression)")
+    st.markdown("#### Feature importance (linear models: LR, SVM)")
     try:
         pipeline = load_model()
         names_fake, coefs_fake, names_real, coefs_real = get_lr_feature_importance(pipeline, top_n=15)

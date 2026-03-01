@@ -71,7 +71,7 @@ def get_dataset_stats() -> Optional[Dict[str, Any]]:
 def get_metrics() -> Optional[Dict[str, Dict[str, Any]]]:
     """
     Return per-model metrics from the evaluation artifact.
-    Structure: { "Logistic Regression": { "Accuracy": 0.87, ... }, "Decision Tree": { ... } }
+    Structure: { "Logistic Regression": { "Accuracy": 0.87, ... }, ... }
     """
     data = load_evaluation_artifact()
     if not data:
@@ -80,6 +80,14 @@ def get_metrics() -> Optional[Dict[str, Dict[str, Any]]]:
     if not models or not isinstance(models, dict):
         return None
     return models
+
+
+def get_best_model_name() -> Optional[str]:
+    """Return the best model name from the artifact, or None."""
+    data = load_evaluation_artifact()
+    if not data:
+        return None
+    return data.get("best_model")
 
 
 def get_confusion_matrices() -> Optional[Dict[str, List[List[int]]]]:
