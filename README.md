@@ -8,7 +8,7 @@
 
 [Overview](#overview) · [Architecture](#system-architecture) · [Quickstart](#quickstart) · [ML Pipeline](#ml-pipeline) · [Results](#results) · [Deployment](#deployment) · [Limitations](#limitations)
 
-**Live Application:** [https://](https://)
+**Live Application:** [Demo](https://news-creditability.streamlit.app/)
 
 </div>
 
@@ -24,24 +24,26 @@ Trained on the **[Fake and Real News Dataset](https://www.kaggle.com/datasets/cl
 
 ### Dataset at a Glance
 
-| Attribute | Detail |
-| --- | --- |
-| Source | Kaggle — Fake and Real News Dataset |
-| Total Records | 40,000+ rows |
-| Class Distribution | ~50% Fake · ~50% Real |
-| Data Format | CSV (Fake.csv, True.csv) |
-| Text Fields | Title + article body (English) |
-| Labels | Fake = 0, Real = 1 (assigned by loader) |
+
+| Attribute          | Detail                                  |
+| ------------------ | --------------------------------------- |
+| Source             | Kaggle — Fake and Real News Dataset    |
+| Total Records      | 40,000+ rows                            |
+| Class Distribution | ~50% Fake · ~50% Real                  |
+| Data Format        | CSV (Fake.csv, True.csv)                |
+| Text Fields        | Title + article body (English)          |
+| Labels             | Fake = 0, Real = 1 (assigned by loader) |
 
 ---
 
 ## Project Team — Section A
 
-| Team Member | Role | Contribution | GitHub |
-| --- | --- | --- | --- |
-| **Shaik Tajuddin** | Project Lead and GitHub Manager | Project leadership, repository creation and enhancement, roadmap planning, repo structure design, notebook architecture, requirements and tech stack planning, PR reviews, version control and collaboration management | [@Taj-2005](https://github.com/Taj-2005) |
-| **Nipun** | Backend and Packaging Engineer | Folder architecture implementation, converting notebooks into modular Python files, building reusable ML pipeline, preparing codebase for Streamlit integration, project modularization | [@nipun1803](https://github.com/nipun1803) |
-| **Hadole** | Deployment and UI Engineer | Streamlit application design, deployment architecture, model integration into UI, preparing deployable structure, hosting setup and deployment pipeline, usability flow | [@omkar-hadole](https://github.com/omkar-hadole) |
+
+| Team Member        | Role                            | Contribution                                                                                                                                                                                                            | GitHub                                           |
+| ------------------ | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| **Shaik Tajuddin** | Project Lead and GitHub Manager | Project leadership, repository creation and enhancement, roadmap planning, repo structure design, notebook architecture, requirements and tech stack planning, PR reviews, version control and collaboration management | [@Taj-2005](https://github.com/Taj-2005)         |
+| **Nipun**          | Backend and Packaging Engineer  | Folder architecture implementation, converting notebooks into modular Python files, building reusable ML pipeline, preparing codebase for Streamlit integration, project modularization                                 | [@nipun1803](https://github.com/nipun1803)       |
+| **Hadole**         | Deployment and UI Engineer      | Streamlit application design, deployment architecture, model integration into UI, preparing deployable structure, hosting setup and deployment pipeline, usability flow                                                 | [@omkar-hadole](https://github.com/omkar-hadole) |
 
 ---
 
@@ -172,16 +174,17 @@ User Input (Article Text)
 
 ### Data Flow Summary
 
-| Stage | Input | Output | Module |
-| --- | --- | --- | --- |
-| Load | `dataset/Fake.csv`, `dataset/True.csv` | Merged DataFrame with labels | `src/data/loader.py` |
-| Prepare | Combined title + text | `cleaned_text`, `label` columns | `src/features/preprocessing.py` |
-| Split | X (text), y (label) | Stratified 80/20 train/test sets | `sklearn.model_selection` |
-| Vectorize | Text series | Sparse TF-IDF matrix | `Pipeline` (fit on train only) |
-| Train | TF-IDF matrix + labels | Fitted Pipeline artifact | `src/models/pipelines.py` |
-| Evaluate | Pipeline + test set | Classification report, ROC-AUC, CM | `src/evaluation/` |
-| Serialize | Fitted pipeline | `model/pipeline.pkl` | `joblib` |
-| Serve | Raw user text | Verdict + probability | `src/app/` (Streamlit dashboard) |
+
+| Stage     | Input                                  | Output                             | Module                           |
+| --------- | -------------------------------------- | ---------------------------------- | -------------------------------- |
+| Load      | `dataset/Fake.csv`, `dataset/True.csv` | Merged DataFrame with labels       | `src/data/loader.py`             |
+| Prepare   | Combined title + text                  | `cleaned_text`, `label` columns    | `src/features/preprocessing.py`  |
+| Split     | X (text), y (label)                    | Stratified 80/20 train/test sets   | `sklearn.model_selection`        |
+| Vectorize | Text series                            | Sparse TF-IDF matrix               | `Pipeline` (fit on train only)   |
+| Train     | TF-IDF matrix + labels                 | Fitted Pipeline artifact           | `src/models/pipelines.py`        |
+| Evaluate  | Pipeline + test set                    | Classification report, ROC-AUC, CM | `src/evaluation/`                |
+| Serialize | Fitted pipeline                        | `model/pipeline.pkl`               | `joblib`                         |
+| Serve     | Raw user text                          | Verdict + probability              | `src/app/` (Streamlit dashboard) |
 
 > **Critical invariant:** The same `clean_text()` function and the same fitted pipeline (vectorizer + classifier) are used in both training and inference to eliminate preprocessing drift.
 
@@ -332,22 +335,24 @@ def clean_text(text: str) -> str:
 
 ### Stage 2 — Feature Extraction (TF-IDF)
 
-| Hyperparameter | Value |
-| --- | --- |
+
+| Hyperparameter | Value                              |
+| -------------- | ---------------------------------- |
 | `max_features` | 20,000 – 25,000 (model-dependent) |
-| `ngram_range` | (1, 2) — unigrams and bigrams |
-| `min_df` | 2 |
-| `max_df` | 0.92 |
-| `sublinear_tf` | True |
+| `ngram_range`  | (1, 2) — unigrams and bigrams     |
+| `min_df`       | 2                                  |
+| `max_df`       | 0.92                               |
+| `sublinear_tf` | True                               |
 
 ### Stage 3 — Classification Models
 
-| Model | Key Hyperparameters | Notes |
-| --- | --- | --- |
-| **Logistic Regression** | `C=2.0`, `class_weight='balanced'`, `solver='lbfgs'` | Interpretable; calibrated probabilities |
-| **Naive Bayes** | `MultinomialNB(alpha=0.1)` | Fast; works well with sparse TF-IDF matrices |
-| **Random Forest** | `n_estimators=200`, `max_depth=30`, `class_weight='balanced'` | Non-linear; robust to feature noise |
-| **SVM** | `LinearSVC(C=1.0)`, `class_weight='balanced'` | Strong linear decision boundary |
+
+| Model                   | Key Hyperparameters                                           | Notes                                        |
+| ----------------------- | ------------------------------------------------------------- | -------------------------------------------- |
+| **Logistic Regression** | `C=2.0`, `class_weight='balanced'`, `solver='lbfgs'`          | Interpretable; calibrated probabilities      |
+| **Naive Bayes**         | `MultinomialNB(alpha=0.1)`                                    | Fast; works well with sparse TF-IDF matrices |
+| **Random Forest**       | `n_estimators=200`, `max_depth=30`, `class_weight='balanced'` | Non-linear; robust to feature noise          |
+| **SVM**                 | `LinearSVC(C=1.0)`, `class_weight='balanced'`                 | Strong linear decision boundary              |
 
 The best model by F1 Score is saved as `model/pipeline.pkl` and used by the Streamlit application. All four models are compared in the notebook and in the **Model Comparison** dashboard page.
 
@@ -408,23 +413,25 @@ print(f"Fake probability: {proba[0]:.2%}")
 
 > Results are produced by running the notebook or `python scripts/run_evaluation.py`. The dashboard loads them from `model/evaluation_results.json`. No metrics are hardcoded.
 
-| Metric | Logistic Regression | Naive Bayes | Random Forest | SVM |
-| --- | --- | --- | --- | --- |
-| **Accuracy** | High | Competitive | Competitive | High |
-| **Precision / Recall / F1** | Strong | Strong | Strong | Strong |
-| **ROC-AUC** | High | Good | Good | High |
-| **5-Fold CV F1** | See artifact | See artifact | See artifact | See artifact |
+
+| Metric                      | Logistic Regression | Naive Bayes  | Random Forest | SVM          |
+| --------------------------- | ------------------- | ------------ | ------------- | ------------ |
+| **Accuracy**                | High                | Competitive  | Competitive   | High         |
+| **Precision / Recall / F1** | Strong              | Strong       | Strong        | Strong       |
+| **ROC-AUC**                 | High                | Good         | Good          | High         |
+| **5-Fold CV F1**            | See artifact        | See artifact | See artifact  | See artifact |
 
 The best model by F1 is selected and persisted to `model/pipeline.pkl`. The notebook and **Model Comparison** dashboard page display ROC curves, Precision-Recall curves, confusion matrices, and a CV F1 bar chart for all four models.
 
 ### Metric Definitions
 
-| Metric | Definition | Why It Matters |
-| --- | --- | --- |
-| **Precision (Fake)** | Of all articles flagged Fake, the fraction that are actually Fake | Reduces false alarms on real news |
-| **Recall (Fake)** | Of all actual Fake articles, the fraction the model correctly caught | Reduces missed misinformation |
-| **F1 Score** | Harmonic mean of Precision and Recall | Primary optimization target |
-| **ROC-AUC** | Ranking quality across all decision thresholds | Threshold-independent performance measure |
+
+| Metric               | Definition                                                           | Why It Matters                            |
+| -------------------- | -------------------------------------------------------------------- | ----------------------------------------- |
+| **Precision (Fake)** | Of all articles flagged Fake, the fraction that are actually Fake    | Reduces false alarms on real news         |
+| **Recall (Fake)**    | Of all actual Fake articles, the fraction the model correctly caught | Reduces missed misinformation             |
+| **F1 Score**         | Harmonic mean of Precision and Recall                                | Primary optimization target               |
+| **ROC-AUC**          | Ranking quality across all decision thresholds                       | Threshold-independent performance measure |
 
 For misinformation detection, both Precision and Recall are critical: high Recall catches more fake news; high Precision avoids incorrectly flagging real news.
 
@@ -434,7 +441,7 @@ For misinformation detection, both Precision and Recall are critical: high Recal
 
 ### Streamlit Dashboard — News Credibility Analyzer
 
-**Live:** [https://](https://)
+[Live Demo](https://news-creditability.streamlit.app)
 
 Run locally:
 
@@ -445,13 +452,14 @@ streamlit run app.py
 
 The application consists of five pages:
 
-| Page | Description |
-| --- | --- |
-| **Overview** | Key metrics (accuracy, F1, ROC-AUC, 5-fold CV F1), dataset summary, and attribution |
-| **Dataset Intelligence** | Class distribution, text length distributions, top TF-IDF features by class |
-| **Model Comparison** | ROC curves, Precision-Recall curves, confusion matrices, CV F1 distribution, feature importance for linear models |
-| **Live Prediction Lab** | Text input with sample articles, Analyze button → Fake/Real verdict with confidence score |
-| **Architecture** | Pipeline overview and repository structure map |
+
+| Page                     | Description                                                                                                       |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| **Overview**             | Key metrics (accuracy, F1, ROC-AUC, 5-fold CV F1), dataset summary, and attribution                               |
+| **Dataset Intelligence** | Class distribution, text length distributions, top TF-IDF features by class                                       |
+| **Model Comparison**     | ROC curves, Precision-Recall curves, confusion matrices, CV F1 distribution, feature importance for linear models |
+| **Live Prediction Lab**  | Text input with sample articles, Analyze button → Fake/Real verdict with confidence score                        |
+| **Architecture**         | Pipeline overview and repository structure map                                                                    |
 
 The app reads `model/pipeline.pkl` (best model) and `model/evaluation_results.json` (metrics). If either file is missing, the relevant pages display a clear prompt to run the training script or notebook — no stale or hardcoded data is ever shown.
 
@@ -490,6 +498,7 @@ git push origin main
 ```
 
 > If `model/pipeline.pkl` exceeds 100 MB, use Git LFS:
+>
 > ```bash
 > git lfs install && git lfs track "*.pkl"
 > git add .gitattributes && git commit -m "chore: add git lfs"
@@ -508,12 +517,13 @@ Your live application will be available at the URL shown in the Streamlit Cloud 
 
 ### Environment Requirements
 
-| Requirement | Value |
-| --- | --- |
-| Python | 3.8 or higher |
-| GPU | Not required |
-| RAM | ~512 MB (model and vectorizer in memory) |
-| Storage | ~100–200 MB (pipeline.pkl) |
+
+| Requirement | Value                                    |
+| ----------- | ---------------------------------------- |
+| Python      | 3.8 or higher                            |
+| GPU         | Not required                             |
+| RAM         | ~512 MB (model and vectorizer in memory) |
+| Storage     | ~100–200 MB (pipeline.pkl)              |
 
 ### Dependencies (`requirements.txt`)
 
@@ -537,14 +547,15 @@ pip install -r requirements.txt
 
 ## Limitations
 
-| Area | Limitation |
-| --- | --- |
-| **Language** | Preprocessing uses English NLTK resources; the dataset is English-only |
-| **Domain** | Trained on the Kaggle Fake and Real News corpus; may not generalize to other domains or topics |
-| **Task Scope** | Binary classification only (Fake/Real); no multi-label support for satire, misleading framing, or out-of-context articles |
-| **Temporal Generalization** | Random train/test split; performance may be overstated if the news distribution shifts over time |
-| **Model Ceiling** | Classical TF-IDF with LR/SVM; not state-of-the-art compared to fine-tuned transformer models |
-| **Probability Calibration** | `predict_proba` outputs are not formally calibrated (no Platt scaling or isotonic regression applied) |
+
+| Area                        | Limitation                                                                                                                |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **Language**                | Preprocessing uses English NLTK resources; the dataset is English-only                                                    |
+| **Domain**                  | Trained on the Kaggle Fake and Real News corpus; may not generalize to other domains or topics                            |
+| **Task Scope**              | Binary classification only (Fake/Real); no multi-label support for satire, misleading framing, or out-of-context articles |
+| **Temporal Generalization** | Random train/test split; performance may be overstated if the news distribution shifts over time                          |
+| **Model Ceiling**           | Classical TF-IDF with LR/SVM; not state-of-the-art compared to fine-tuned transformer models                              |
+| **Probability Calibration** | `predict_proba` outputs are not formally calibrated (no Platt scaling or isotonic regression applied)                     |
 
 ---
 
@@ -558,16 +569,16 @@ Milestone 2 will extend this system into an **autonomous misinformation monitori
 
 ## Milestone 1 Deliverables Checklist
 
-- [x] Problem understanding and media use-case documented
-- [x] Input-output specification (`text → credibility label + probability`)
-- [x] System architecture diagram
-- [x] Working Streamlit application (**News Credibility Analyzer**) with multi-page UI
-- [x] Model performance evaluation report (Precision · Recall · F1 · ROC-AUC · CV F1)
-- [x] Multiple models trained and compared (Logistic Regression · Naive Bayes · Random Forest · SVM)
-- [x] Confusion matrices, ROC curves, and Precision-Recall curves
-- [x] TF-IDF feature interpretability (top fake/real indicative terms)
-- [x] Dataset attribution (Kaggle Fake and Real News) in app and README
-- [x] Publicly hosted application URL — [https://](https://)
+- [X]  Problem understanding and media use-case documented
+- [X]  Input-output specification (`text → credibility label + probability`)
+- [X]  System architecture diagram
+- [X]  Working Streamlit application (**News Credibility Analyzer**) with multi-page UI
+- [X]  Model performance evaluation report (Precision · Recall · F1 · ROC-AUC · CV F1)
+- [X]  Multiple models trained and compared (Logistic Regression · Naive Bayes · Random Forest · SVM)
+- [X]  Confusion matrices, ROC curves, and Precision-Recall curves
+- [X]  TF-IDF feature interpretability (top fake/real indicative terms)
+- [X]  Dataset attribution (Kaggle Fake and Real News) in app and README
+- [X]  Publicly hosted application URL — [https://](https://)
 
 ---
 

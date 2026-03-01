@@ -15,13 +15,17 @@ from src.app.core import (
 def render():
     page_header(
         "News Credibility Analyzer",
-        "This system detects whether a news article is Fake or Real using machine learning. Trained on the Kaggle Fake and Real News dataset with classical NLP (TF-IDF) and interpretable classifiers.",
+        "This system detects whether a news article is Fake or Real using machine learning. Trained on the Kaggle Fake and Real News dataset with classical NLP (TF-IDF) and interpretable classifiers."
     )
 
     # Problem statement
     st.markdown("#### What it does")
     st.markdown(
         "Misinformation spreads faster than manual fact-checking can scale. This app provides **automated binary classification** of news as **Fake** or **Real**, using a reproducible ML pipeline — interpretable models, no LLMs, no GPU."
+    )
+    st.info(
+        "**Trained on:** [Fake and Real News Dataset](https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset). "
+        "For the most accurate credibility results, use **US-based articles or news** that align with this dataset (English, similar style and topics)."
     )
 
     # KPI section: use best model metrics when available
@@ -87,8 +91,8 @@ def render():
     with d3:
         st.metric("Task", "Fake vs Real (binary)")
     st.caption(
-        "Dataset: **Fake and Real News** — "
-        "https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset"
+        "Dataset: [Fake and Real News (Kaggle)](https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset). "
+        "Best results with US-based, English news that matches the training distribution."
     )
 
     # Product pitch
@@ -96,5 +100,5 @@ def render():
     st.markdown("#### Product pitch")
     st.markdown(
         "**Problem → Data → Model → Evaluation → Deployment → Live Testing**  \n"
-        "This milestone delivers an end-to-end pipeline: from raw text to a credibility verdict, with stratified splits, class balancing, two compared models (Logistic Regression and Decision Tree), and a Streamlit app suitable for demos and further agentic AI integration."
+        "This milestone delivers an end-to-end pipeline: from raw text to a credibility verdict, with stratified splits, class balancing, four compared models (Logistic Regression, Naive Bayes, Random Forest, SVM), and a Streamlit app suitable for demos and further agentic AI integration."
     )
