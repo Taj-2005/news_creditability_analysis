@@ -448,24 +448,28 @@ def render():
             st.plotly_chart(fig_gauge, use_container_width=True)
 
         with col_probs:
+            bar_width = fake_prob if is_fake else real_prob
+            risk_label = "Credibility risk · higher = more likely fake" if is_fake else "Credibility score · higher = more likely real"
+            bar_class = "risk-fill-fake" if is_fake else "risk-fill-real"
+
             st.markdown(
                 f"""
                 <div class="prob-grid">
-                  <div class="prob-card">
+                <div class="prob-card">
                     <div class="prob-card-label">Fake probability</div>
                     <div class="prob-card-value">{fake_prob:.1%}</div>
-                  </div>
-                  <div class="prob-card">
+                </div>
+                <div class="prob-card">
                     <div class="prob-card-label">Real probability</div>
                     <div class="prob-card-value">{real_prob:.1%}</div>
-                  </div>
+                </div>
                 </div>
                 <div class="risk-section">
-                  <div class="risk-label">Credibility risk · higher = more likely fake</div>
-                  <div class="risk-track">
-                    <div class="{'risk-fill-fake' if is_fake else 'risk-fill-real'}"
-                         style="width:{fake_prob*100:.1f}%"></div>
-                  </div>
+                <div class="risk-label">{risk_label}</div>
+                <div class="risk-track">
+                    <div class="{bar_class}"
+                        style="width:{bar_width*100:.1f}%"></div>
+                </div>
                 </div>
                 """,
                 unsafe_allow_html=True,
