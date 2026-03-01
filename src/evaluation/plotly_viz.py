@@ -294,7 +294,7 @@ def plotly_cv_boxplot_reference(
             font=dict(size=17),
         ),
         height=height,
-        margin=dict(t=70, b=70, l=70, r=50),
+        margin=dict(t=100, b=70, l=70, r=50),
         showlegend=False,
         xaxis=dict(
             showgrid=False,
@@ -307,7 +307,7 @@ def plotly_cv_boxplot_reference(
             zeroline=True,
             zerolinecolor=GRID_COLOR,
             title=dict(text="F1 Score", font=dict(size=14)),
-            range=[0, 1.08],
+            range=[0, 1.22],
             tickvals=[0, 0.2, 0.4, 0.6, 0.8, 1.0],
             ticktext=["0%", "20%", "40%", "60%", "80%", "100%"],
             tickfont=dict(size=12),

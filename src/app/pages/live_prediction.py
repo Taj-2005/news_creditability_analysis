@@ -27,7 +27,7 @@ def render():
 
     page_header(
         "Live prediction lab",
-        "Paste a headline or article excerpt. The system detects whether the news is **Fake** or **Real** using machine learning. Get a verdict and confidence score.",
+        "Paste a headline or article excerpt. The system detects whether the news is Fake or Real using machine learning. Get a verdict and confidence score.",
     )
 
     # Large text input
@@ -41,21 +41,37 @@ def render():
 
     # Sample news: click to auto-fill input
     st.markdown("**Sample news** (click to try)")
-    c1, c2, c3, _ = st.columns(4)
+    c1, c2, c3, c4, c5 = st.columns(5)
     with c1:
+        if st.button("Fake example", key="ex_fake"):
+            st.session_state["live_pending_example"] = EXAMPLE_TEXTS["Fake example"]
+            st.rerun()
+    with c2:
+        if st.button("Real example", key="ex_real"):
+            st.session_state["live_pending_example"] = EXAMPLE_TEXTS["Real example"]
+            st.rerun()
+    with c3:
         if st.button("Government policy...", key="ex_r"):
             st.session_state["live_pending_example"] = EXAMPLE_TEXTS["Government policy"]
             st.rerun()
-    with c2:
+    with c4:
         if st.button("Scientists breakthrough...", key="ex_f"):
             st.session_state["live_pending_example"] = EXAMPLE_TEXTS["Scientists breakthrough"]
             st.rerun()
-    with c3:
-        if st.button("Conspiracy / weather control...", key="ex_h"):
+    with c5:
+        if st.button("Conspiracy / weather...", key="ex_h"):
             st.session_state["live_pending_example"] = EXAMPLE_TEXTS["Conspiracy sample"]
             st.rerun()
 
-    # Analyze / Clear
+    # Analyze / Clear — force primary button text white (override theme)
+    st.markdown(
+        "<style>"
+        ".block-container button[kind=\"primary\"], .block-container button[kind=\"primary\"] *, "
+        "div[data-testid=\"column\"] button[kind=\"primary\"], div[data-testid=\"column\"] button[kind=\"primary\"] * "
+        "{ color: #ffffff !important; fill: #ffffff !important; -webkit-text-fill-color: #ffffff !important; }"
+        "</style>",
+        unsafe_allow_html=True,
+    )
     col_btn1, col_btn2, _ = st.columns([1, 1, 3])
     with col_btn1:
         predict_clicked = st.button("Analyze credibility", type="primary", use_container_width=True)

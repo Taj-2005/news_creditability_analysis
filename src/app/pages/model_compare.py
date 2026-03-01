@@ -68,7 +68,17 @@ def render():
     # CV distribution boxplot
     st.markdown("#### Cross-validation F1 distribution")
     fig_cv = plotly_cv_boxplot_reference(metrics)
-    st.plotly_chart(fig_cv, width="stretch")
+    has_cv_data = any(
+        isinstance(m.get("CV F1"), (list, tuple)) and len(m.get("CV F1", [])) >= 2
+        for m in (metrics or {}).values()
+    )
+    if has_cv_data:
+        st.plotly_chart(fig_cv, width="stretch")
+    else:
+        st.info(
+            "CV F1 not in evaluation results. Run the full notebook (including the CV F1 cell) or "
+            "`python scripts/run_evaluation.py` to compute 5-fold cross-validation F1, then re-run the app."
+        )
 
     # Commentary
     st.markdown("---")

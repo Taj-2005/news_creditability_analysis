@@ -1,20 +1,17 @@
 """
 Run full evaluation pipeline and save evaluation_results.json.
-Use this or the notebook to generate the single source of truth for metrics and dataset stats.
+Trains LR, Naive Bayes, Random Forest, SVM; picks best by F1; saves model/pipeline.pkl and model/evaluation_results.json.
 
 Usage (from repo root):
     python scripts/run_evaluation.py
 
 Expects dataset/Fake.csv and dataset/True.csv (Kaggle Fake and Real News dataset).
-Trains Logistic Regression, Naive Bayes, Random Forest, SVM; picks best by F1; saves to model/pipeline.pkl.
-Saves model/evaluation_results.json.
 """
 
 import json
 import sys
 from pathlib import Path
 
-# Repo root on path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))

@@ -15,7 +15,7 @@ from src.app.core import (
 def render():
     page_header(
         "News Credibility Analyzer",
-        "This system detects whether a news article is **Fake** or **Real** using machine learning. Trained on the Kaggle Fake and Real News dataset with classical NLP (TF-IDF) and interpretable classifiers.",
+        "This system detects whether a news article is Fake or Real using machine learning. Trained on the Kaggle Fake and Real News dataset with classical NLP (TF-IDF) and interpretable classifiers.",
     )
 
     # Problem statement
@@ -48,12 +48,22 @@ def render():
     with k3:
         st.metric("ROC-AUC", f"{lr['ROC-AUC']:.2%}", help="Ranking / discrimination")
     with k4:
+        # CV F1 is added by scripts/run_evaluation.py; notebook may not include it
         cv = lr.get("CV F1")
         if isinstance(cv, (list, tuple)) and len(cv) >= 2:
             cv_mean, cv_std = float(cv[0]), float(cv[1])
             st.metric("5-Fold CV F1", f"{cv_mean:.2%} ± {cv_std:.2%}", help="Cross-validation stability")
         else:
-            st.metric("5-Fold CV F1", "—", help="Run evaluation to compute")
+            # Fallback: show from any model that has CV F1 (e.g. from run_evaluation.py)
+            cv_fallback = None
+            for m in (metrics or {}).values():
+                if isinstance(m.get("CV F1"), (list, tuple)) and len(m["CV F1"]) >= 2:
+                    cv_fallback = (float(m["CV F1"][0]), float(m["CV F1"][1]))
+                    break
+            if cv_fallback:
+                st.metric("5-Fold CV F1", f"{cv_fallback[0]:.2%} ± {cv_fallback[1]:.2%}", help="Cross-validation (from evaluation script)")
+            else:
+                st.metric("5-Fold CV F1", "—", help="Run scripts/run_evaluation.py to compute")
 
     # Animated-style progress bars (visual only; Streamlit progress is 0–1)
     st.markdown("")

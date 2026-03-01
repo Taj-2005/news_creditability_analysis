@@ -2,16 +2,13 @@
 
 # News Credibility Classification System
 
-### Intelligent Misinformation Detection via Classical NLP & Machine Learning
-
-[![Python](https://img.shields.io/badge/Python-3.8%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
-[![scikit-learn](https://img.shields.io/badge/scikit--learn-1.x-F7931E?style=flat-square&logo=scikitlearn&logoColor=white)](https://scikit-learn.org)
-[![Streamlit](https://img.shields.io/badge/Streamlit-Deployed-FF4B4B?style=flat-square&logo=streamlit&logoColor=white)](https://streamlit.io)
-[![Dataset](https://img.shields.io/badge/Dataset-Fake%20%26%20Real%20News-6366F1?style=flat-square)](https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset)
+### Intelligent Misinformation Detection via Classical NLP and Machine Learning
 
 **Project 11 · Milestone 1 · AI/ML Systems**
 
-[Overview](#-overview) · [Architecture](#-system-architecture) · [Quickstart](#-quickstart) · [Pipeline](#-ml-pipeline) · [Results](#-results) · [Deployment](#-deployment) · [Limitations](#-limitations)
+[Overview](#overview) · [Architecture](#system-architecture) · [Quickstart](#quickstart) · [ML Pipeline](#ml-pipeline) · [Results](#results) · [Deployment](#deployment) · [Limitations](#limitations)
+
+**Live Application:** [https://](https://)
 
 </div>
 
@@ -19,215 +16,240 @@
 
 ## Overview
 
-Misinformation spreads faster than manual fact-checking can scale. This project builds an **end-to-end, production-structured ML pipeline** that automatically classifies news articles as **Fake** or **Real** using classical NLP techniques — no LLMs, no GPU required.
+Misinformation spreads faster than manual fact-checking can scale. This project builds an end-to-end, production-structured ML pipeline that automatically classifies news articles as **Fake** or **Real** using classical NLP techniques — no LLMs, no GPU required.
 
-Trained on the **[Fake and Real News Dataset](https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset)** (Kaggle: clmentbisaillon/fake-and-real-news-dataset). The system uses TF-IDF vectorization (unigrams + bigrams) paired with Logistic Regression and Decision Tree classifiers, wrapped in a clean sklearn `Pipeline` and served through a Streamlit web application.
+Trained on the **[Fake and Real News Dataset](https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset)** (40,000+ articles), the system uses TF-IDF vectorization (unigrams and bigrams) with Logistic Regression, Naive Bayes, Random Forest, and SVM. The best-performing model by F1 score is persisted and served through a multi-page **Streamlit** web application called the **News Credibility Analyzer**.
 
-**This is Milestone 1** of a two-phase project. Milestone 2 extends the system into a LangGraph-based agentic AI assistant with RAG-powered fact-checking.
+**This is Milestone 1** of a two-phase project. Milestone 2 will extend the system into a LangGraph-based agentic AI assistant with RAG-powered fact-checking.
 
-### Problem Statement
+### Dataset at a Glance
 
-
-| Challenge                     | Scale        |
-| ----------------------------- | ------------ |
-| Fake and Real News (Kaggle)   | 40,000+ rows |
-| Class distribution            | ~50% Fake · ~50% Real |
-| Data format                   | CSV (Fake.csv, True.csv) |
-| Text                          | Title + article body (English) |
+| Attribute | Detail |
+| --- | --- |
+| Source | Kaggle — Fake and Real News Dataset |
+| Total Records | 40,000+ rows |
+| Class Distribution | ~50% Fake · ~50% Real |
+| Data Format | CSV (Fake.csv, True.csv) |
+| Text Fields | Title + article body (English) |
+| Labels | Fake = 0, Real = 1 (assigned by loader) |
 
 ---
 
-## Project Team - Section A
+## Project Team — Section A
 
-
-| Team Member        | Role                          | Contribution                                                                                                                                                                                                          | GitHub Profile                                   |
-| ------------------ | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| **Shaik Tajuddin** | Project Lead & GitHub Manager | Project leadership, repository creation & enhancement, roadmap planning, repo structure planning, notebook (ipynb) design, requirements & tech stack planning, PR reviews, version control & collaboration management | [@Taj-2005](https://github.com/Taj-2005)         |
-| **Nipun**          | Backend & Packaging Engineer  | Folder architecture implementation, converting notebooks into modular Python files, building reusable ML pipeline, preparing codebase for Streamlit integration, project modularization                               | [@nipun1803](https://github.com/nipun1803)       |
-| **Hadole**         | Deployment & UI Engineer      | Streamlit application design, deployment architecture, model integration into UI, preparing deployable structure, hosting setup & deployment pipeline, usability flow                                                 | [@omkar-hadole](https://github.com/omkar-hadole) |
+| Team Member | Role | Contribution | GitHub |
+| --- | --- | --- | --- |
+| **Shaik Tajuddin** | Project Lead and GitHub Manager | Project leadership, repository creation and enhancement, roadmap planning, repo structure design, notebook architecture, requirements and tech stack planning, PR reviews, version control and collaboration management | [@Taj-2005](https://github.com/Taj-2005) |
+| **Nipun** | Backend and Packaging Engineer | Folder architecture implementation, converting notebooks into modular Python files, building reusable ML pipeline, preparing codebase for Streamlit integration, project modularization | [@nipun1803](https://github.com/nipun1803) |
+| **Hadole** | Deployment and UI Engineer | Streamlit application design, deployment architecture, model integration into UI, preparing deployable structure, hosting setup and deployment pipeline, usability flow | [@omkar-hadole](https://github.com/omkar-hadole) |
 
 ---
 
 ## System Architecture
 
+The system is divided into two phases: a **Training Pipeline** that builds and persists the best model, and an **Inference Pipeline** that serves real-time predictions through the web application.
+
+### Training Pipeline
+
 ```
-┌──────────────────────────────────────────────────────────────────────────────────────────┐
-│                     INTELLIGENT NEWS CREDIBILITY ANALYSIS SYSTEM                         │
-│                         Milestone 1 · Classical NLP + Machine Learning                   │
-└──────────────────────────────────────────────────────────────────────────────────────────┘
+Data Source
+───────────────────────────────────────────────
+Kaggle Fake and Real News Dataset
+dataset/Fake.csv + dataset/True.csv
+(fields: title, text, label)
 
+          │
+          ▼
 
-                                    DATA SOURCE
-                           ───────────────────────────
-                    Kaggle Fake and Real News Dataset
-                  (dataset/Fake.csv + True.csv → title + text, label)
+┌─────────────────────────────┐
+│        Data Loading         │
+│  Fake.csv + True.csv        │
+│  Merge → label (0=Fake,     │
+│  1=Real) → shuffle          │
+└─────────────┬───────────────┘
+              │
+              ▼
 
+┌─────────────────────────────┐
+│       Text Preparation      │
+│  Concatenate title + text   │
+│  Assign binary labels       │
+└─────────────┬───────────────┘
+              │
+              ▼
 
-╔══════════════════════════════════════ TRAINING PIPELINE ══════════════════════════════════════╗
+┌─────────────────────────────────────────┐
+│            Preprocessing                │
+│  Lowercasing                            │
+│  Remove URLs and punctuation            │
+│  Stopword removal (NLTK English)        │
+│  Tokenization                           │
+│  Lemmatization (WordNet)                │
+└─────────────┬───────────────────────────┘
+              │
+              ▼
 
-        ┌────────────────────┐
-        │   Data Loading     │
-        │ dataset/Fake.csv   │
-        │ dataset/True.csv   │
-        └─────────┬──────────┘
-                  ▼
-        ┌────────────────────┐
-        │ Text Preparation   │
-        │ Merge title + text │
-        │ Label: Fake=1, Real=0
-        └─────────┬──────────┘
-                  ▼
-        ┌──────────────────────────────────────────┐
-        │              Preprocessing               │
-        │------------------------------------------│
-        │ • Lowercasing                            │
-        │ • Remove URLs & punctuation              │
-        │ • Stopword removal                       │
-        │ • Tokenization                           │
-        │ • Lemmatization (WordNet)                │
-        └─────────┬────────────────────────────────┘
-                  ▼
-        ┌──────────────────────────────────────────┐
-        │        Feature Engineering (TF-IDF)      │
-        │------------------------------------------│
-        │ • 25K (LR) / 15K (DT) max features      │
-        │ • Unigrams + Bigrams (1, 2)             │
-        │ • Sublinear TF scaling                   │
-        └─────────┬────────────────────────────────┘
-                  ▼
-        ┌──────────────────────────────────────────┐
-        │          Machine Learning Models         │
-        │------------------------------------------│
-        │ • Logistic Regression                    │
-        │ • Decision Tree                          │
-        │ • Probability Estimation                 │
-        └─────────┬────────────────────────────────┘
-                  ▼
-        ┌────────────────────┐
-        │ Model Evaluation   │
-        │ Precision / Recall │
-        │ F1 Score / Matrix  │
-        └─────────┬──────────┘
-                  ▼
-        ┌────────────────────┐
-        │ Model Persistence  │
-        │ Save pipeline.pkl  │
-        └────────────────────┘
+┌─────────────────────────────────────────┐
+│       Feature Engineering (TF-IDF)      │
+│  max_features: 20K–25K                  │
+│  ngram_range: (1, 2) — unigrams +       │
+│  bigrams                                │
+│  sublinear_tf: True                     │
+└─────────────┬───────────────────────────┘
+              │
+              ▼
 
-╚══════════════════════════════════════════════════════════════════════════════════════════════╝
+┌─────────────────────────────────────────┐
+│        Machine Learning Models          │
+│  Logistic Regression                    │
+│  Naive Bayes                            │
+│  Random Forest                          │
+│  SVM (LinearSVC)                        │
+│  Best model by F1 → pipeline.pkl        │
+└─────────────┬───────────────────────────┘
+              │
+              ▼
 
+┌─────────────────────────────────────────┐
+│           Model Evaluation              │
+│  Precision / Recall / F1                │
+│  ROC-AUC / Confusion Matrix             │
+│  5-Fold Cross-Validation F1             │
+└─────────────┬───────────────────────────┘
+              │
+              ▼
 
-
-╔══════════════════════════════════════ INFERENCE PIPELINE ═════════════════════════════════════╗
-
-        User Input (Article Text / URL)
-                    │
-                    ▼
-        ┌────────────────────┐
-        │ Load Saved Model   │
-        │ pipeline.pkl       │
-        └─────────┬──────────┘
-                  ▼
-        ┌────────────────────┐
-        │ Clean Input Text   │
-        │ Same preprocessing │
-        └─────────┬──────────┘
-                  ▼
-        ┌────────────────────┐
-        │ Vectorization      │
-        │ TF-IDF Transform   │
-        └─────────┬──────────┘
-                  ▼
-        ┌────────────────────┐
-        │ Prediction Engine  │
-        │ predict_proba()    │
-        └─────────┬──────────┘
-                  ▼
-        ┌────────────────────────────────────┐
-        │ Credibility Assessment Output      │
-        │------------------------------------│
-        │ Fake / Real Verdict                │
-        │ Confidence Score (0–1)             │
-        │ Risk Level (High / Low)            │
-        └────────────────────────────────────┘
-
-╚══════════════════════════════════════════════════════════════════════════════════════════════╝
+┌─────────────────────────────────────────┐
+│           Model Persistence             │
+│  model/pipeline.pkl                     │
+│  model/evaluation_results.json          │
+└─────────────────────────────────────────┘
 ```
 
-### Data Flow
+### Inference Pipeline
 
+```
+User Input (Article Text)
+          │
+          ▼
 
-| Stage         | Input                     | Output                                         | Module                          |
-| ------------- | ------------------------- | ---------------------------------------------- | ------------------------------- |
-| **Load**      | `dataset/Fake.csv`, `dataset/True.csv` | Merged DataFrame, label (Fake=1, Real=0) | `src/data/loader.py` |
-| **Prepare**   | Combined title+text                   | `cleaned_text`, `label` (0/1)           | `src/features/preprocessing.py` |
-| **Split**     | X (text), y (label)       | Stratified 80/20 train/test sets               | `sklearn.model_selection`       |
-| **Vectorize** | Text series               | Sparse TF-IDF matrix                           | `Pipeline` (fit on train only)  |
-| **Train**     | TF-IDF matrix + labels    | Fitted Pipeline artifact                       | `src/models/pipelines.py`       |
-| **Evaluate**  | Pipeline + test set       | Classification report, ROC-AUC, CM             | `src/evaluation/`               |
-| **Serialize** | Fitted pipeline           | `model/pipeline.pkl`                           | `joblib`                        |
-| **Serve**     | Raw user text             | Verdict + probability                          | `src/app/main.py`               |
+┌─────────────────────────┐
+│    Load Saved Model     │
+│    pipeline.pkl         │
+└───────────┬─────────────┘
+            │
+            ▼
 
-> **Critical invariant:** The same `clean_text()` function and the same fitted pipeline (vectorizer + classifier) are used in both training and inference. No preprocessing drift.
+┌─────────────────────────┐
+│    Clean Input Text     │
+│  Same preprocessing     │
+│  function (no drift)    │
+└───────────┬─────────────┘
+            │
+            ▼
+
+┌─────────────────────────┐
+│     TF-IDF Transform    │
+│  Vectorize cleaned text │
+└───────────┬─────────────┘
+            │
+            ▼
+
+┌─────────────────────────┐
+│    Prediction Engine    │
+│  predict_proba()        │
+└───────────┬─────────────┘
+            │
+            ▼
+
+┌───────────────────────────────────┐
+│    Credibility Assessment Output  │
+│  Verdict: Fake / Real             │
+│  Confidence Score (0.00 – 1.00)   │
+│  Risk Level: High / Low           │
+└───────────────────────────────────┘
+```
+
+### Data Flow Summary
+
+| Stage | Input | Output | Module |
+| --- | --- | --- | --- |
+| Load | `dataset/Fake.csv`, `dataset/True.csv` | Merged DataFrame with labels | `src/data/loader.py` |
+| Prepare | Combined title + text | `cleaned_text`, `label` columns | `src/features/preprocessing.py` |
+| Split | X (text), y (label) | Stratified 80/20 train/test sets | `sklearn.model_selection` |
+| Vectorize | Text series | Sparse TF-IDF matrix | `Pipeline` (fit on train only) |
+| Train | TF-IDF matrix + labels | Fitted Pipeline artifact | `src/models/pipelines.py` |
+| Evaluate | Pipeline + test set | Classification report, ROC-AUC, CM | `src/evaluation/` |
+| Serialize | Fitted pipeline | `model/pipeline.pkl` | `joblib` |
+| Serve | Raw user text | Verdict + probability | `src/app/` (Streamlit dashboard) |
+
+> **Critical invariant:** The same `clean_text()` function and the same fitted pipeline (vectorizer + classifier) are used in both training and inference to eliminate preprocessing drift.
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```
-GenAI/
-├── README.md                          # ← You are here
-├── ARCHITECTURE.md                    # Detailed system design docs
-├── requirements.txt                   # Pinned dependencies
-│
+news_creditability_analysis/
+├── README.md
+├── requirements.txt
+├── app.py                              # Streamlit entry point
+├── .streamlit/
+│   └── config.toml                     # Theme configuration
 ├── notebook/
-│   └── news_credibility.ipynb          # Main training + evaluation notebook
-├── app.py                             # Streamlit app entry point
-│
+│   └── news_credibility.ipynb          # Full pipeline: load, EDA, preprocess, train, evaluate, save
+├── scripts/
+│   └── run_evaluation.py               # Train all models, select best by F1, save artifacts
 ├── dataset/
-│   ├── Fake.csv                       # Kaggle fake news (add after download)
-│   └── True.csv                       # Kaggle real news
+│   ├── Fake.csv                        # Kaggle fake news corpus
+│   └── True.csv                        # Kaggle real news corpus
 ├── model/
-│   ├── pipeline.pkl                   # Serialized sklearn Pipeline (post-training; see note below)
-│   └── evaluation_results.json       # Dataset stats + metrics (from notebook or script)
-├── plots/                             # Optional: figures saved by notebook (EDA, ROC, comparison)
-│
+│   ├── pipeline.pkl                    # Best model (TF-IDF + classifier)
+│   └── evaluation_results.json         # Metrics and dataset stats (generated at runtime)
+├── plots/                              # EDA and evaluation figures
 └── src/
     ├── __init__.py
     ├── data/
-    │   ├── __init__.py
-    │   └── loader.py                  # load_dataset(), prepare_text_column()
+    │   └── loader.py                   # load_dataset() — merges CSVs and assigns labels
     ├── features/
-    │   ├── __init__.py
-    │   └── preprocessing.py           # clean_text() — shared between train + serve
+    │   └── preprocessing.py            # clean_text(), prepare_text_column() — shared train/inference
     ├── models/
-    │   ├── __init__.py
-    │   └── pipelines.py               # build_lr_pipeline(), build_dt_pipeline()
+    │   └── pipelines.py                # build_lr_pipeline(), build_nb_pipeline(), build_rf_pipeline(), build_svm_pipeline()
     ├── evaluation/
-    │   ├── __init__.py
-    │   ├── metrics.py                 # print_report(), cross_validate()
-    │   └── visualization.py           # plot_confusion_matrix(), plot_roc()
+    │   ├── metrics.py
+    │   ├── results_loader.py            # Loads evaluation_results.json for dashboard
+    │   ├── plotly_viz.py               # Plotly charts (ROC, PR curve, confusion matrix, gauge)
+    │   └── visualization.py
     ├── utils/
-    │   └── __init__.py
     └── app/
-        ├── __init__.py
-        └── main.py                    # Streamlit UI (alternate entry point)
+        ├── core.py                     # load_model(), run_prediction(), validation
+        ├── dashboard.py                # Multi-page Streamlit app with sidebar navigation
+        ├── main.py                     # Alternate entry point
+        ├── components/
+        │   ├── styles.py               # Application CSS and theming
+        │   └── ui.py                   # Shared UI components (page_header, etc.)
+        └── pages/
+            ├── home.py                 # Overview — KPIs and dataset summary
+            ├── dataset_insights.py     # Class distribution, text length, TF-IDF features
+            ├── model_compare.py        # ROC, PR curve, confusion matrix, feature importance
+            ├── live_prediction.py      # Text input → Fake/Real verdict with confidence
+            └── architecture.py        # Pipeline and repo mapping
 ```
 
 ---
 
 ## Quickstart
 
-**This repo includes a pre-trained model** (`model/pipeline.pkl`), you can skip steps 3–4 and run the app directly after step 2 (see [Deployment](#deployment) for when the model is pushed to the repo).
+> This repo includes a pre-trained model (`model/pipeline.pkl`). You can skip steps 3 and 4 and run the app directly after setting up the environment.
 
-### 1. Clone & enter the repo
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/Taj-2005/news_creditability_analysis
-cd GenAI
+cd news_creditability_analysis
 ```
 
-### 2. Set up environment
+### 2. Set Up the Environment
 
 ```bash
 python3 -m venv venv
@@ -235,9 +257,9 @@ source venv/bin/activate          # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 3. Add the dataset
+### 3. Add the Dataset
 
-Download the [Fake and Real News Dataset](https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset) from Kaggle, then place **Fake.csv** and **True.csv** inside the **dataset/** folder:
+Download the [Fake and Real News Dataset](https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset) from Kaggle and place `Fake.csv` and `True.csv` inside the `dataset/` folder.
 
 ```
 dataset/
@@ -245,41 +267,54 @@ dataset/
 └── True.csv
 ```
 
-Columns used: `title`, `text`. Labels: Fake=1, Real=0 (assigned automatically by the loader).
+Columns used: `title`, `text`. Labels are assigned automatically — Fake = 0, Real = 1.
 
-### 4. Train the model
+### 4. Train the Model
+
+**Option A — Notebook (full analysis with plots and model comparison)**
 
 ```bash
 jupyter notebook notebook/news_credibility.ipynb
-# Run all cells — model saves to model/pipeline.pkl, plots to plots/ (at repo root)
+# Run from repo root so dataset/ and src/ are on the Python path.
+# Outputs: model/pipeline.pkl, model/evaluation_results.json, plots/*.png
 ```
 
-### 5. Launch the app
+**Option B — Script (fast training and artifact generation)**
+
+```bash
+python scripts/run_evaluation.py
+# Trains LR, Naive Bayes, Random Forest, and SVM.
+# Picks the best model by F1 and saves model/pipeline.pkl and model/evaluation_results.json.
+```
+
+### 5. Launch the Application
 
 ```bash
 streamlit run app.py
 # Opens at http://localhost:8501
 ```
 
+The **News Credibility Analyzer** dashboard has five pages: **Overview**, **Dataset Intelligence**, **Model Comparison**, **Live Prediction Lab**, and **Architecture**. Use the **Live Prediction Lab** to paste any news article and receive a Fake/Real verdict with a confidence score.
+
 ---
 
-## 🔬 ML Pipeline
+## ML Pipeline
 
 ### Stage 1 — Text Preprocessing
 
-Every document goes through the same deterministic preprocessing function:
+Every document passes through the same deterministic `clean_text()` function at both training time and inference time, ensuring no preprocessing drift.
 
 ```
 Raw string
   → lowercase
-  → remove URLs (http/https/www)
+  → remove URLs (http / https / www)
   → remove @mentions
   → keep only [a-z] and whitespace
   → tokenize (split on whitespace)
   → remove NLTK English stopwords
-  → remove tokens with len ≤ 2
+  → remove tokens with length <= 2
   → WordNet lemmatization
-  → rejoin with space
+  → rejoin tokens with space
 ```
 
 ```python
@@ -297,24 +332,24 @@ def clean_text(text: str) -> str:
 
 ### Stage 2 — Feature Extraction (TF-IDF)
 
+| Hyperparameter | Value |
+| --- | --- |
+| `max_features` | 20,000 – 25,000 (model-dependent) |
+| `ngram_range` | (1, 2) — unigrams and bigrams |
+| `min_df` | 2 |
+| `max_df` | 0.92 |
+| `sublinear_tf` | True |
 
-| Hyperparameter | Logistic Regression | Decision Tree |
-| -------------- | ------------------- | ------------- |
-| `max_features` | 25,000              | 15,000        |
-| `ngram_range`  | (1, 2)              | (1, 2)        |
-| `min_df`       | 2                   | 2             |
-| `max_df`       | 0.92                | 0.92          |
-| `sublinear_tf` | True                | True          |
+### Stage 3 — Classification Models
 
-### Stage 3 — Classification
+| Model | Key Hyperparameters | Notes |
+| --- | --- | --- |
+| **Logistic Regression** | `C=2.0`, `class_weight='balanced'`, `solver='lbfgs'` | Interpretable; calibrated probabilities |
+| **Naive Bayes** | `MultinomialNB(alpha=0.1)` | Fast; works well with sparse TF-IDF matrices |
+| **Random Forest** | `n_estimators=200`, `max_depth=30`, `class_weight='balanced'` | Non-linear; robust to feature noise |
+| **SVM** | `LinearSVC(C=1.0)`, `class_weight='balanced'` | Strong linear decision boundary |
 
-
-| Model                   | Key Hyperparameters                                               | Rationale                                                                     |
-| ----------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| **Logistic Regression** | `C=2.0`, `class_weight='balanced'`, `solver='lbfgs'`   | Interpretable coefficients; calibrated probabilities; handles class imbalance |
-| **Decision Tree**       | `max_depth=25`, `min_samples_split=10`, `class_weight='balanced'` | Non-linear splits; depth-limited to reduce overfitting                        |
-
-All stages are encapsulated in a single sklearn `Pipeline` object so the vectorizer is fit **only on training data** and the same vocabulary is used at inference time.
+The best model by F1 Score is saved as `model/pipeline.pkl` and used by the Streamlit application. All four models are compared in the notebook and in the **Model Comparison** dashboard page.
 
 ### Stage 4 — Evaluation
 
@@ -325,60 +360,28 @@ from sklearn.model_selection import cross_val_score
 y_pred  = pipeline.predict(X_test)
 y_proba = pipeline.predict_proba(X_test)[:, 1]
 
-print(classification_report(y_test, y_pred, target_names=['Real', 'Fake']))
+print(classification_report(y_test, y_pred, target_names=['Fake', 'Real']))
 print(f"ROC-AUC: {roc_auc_score(y_test, y_proba):.4f}")
 
 cv_scores = cross_val_score(pipeline, X, y, cv=5, scoring='f1', n_jobs=-1)
-print(f"5-Fold CV F1: {cv_scores.mean():.4f} ± {cv_scores.std():.4f}")
+print(f"5-Fold CV F1: {cv_scores.mean():.4f} +/- {cv_scores.std():.4f}")
 ```
-
----
-
-## Results
-
-> Results are produced by running the notebook or `python scripts/run_evaluation.py`. The dashboard loads them from **model/evaluation_results.json**.
-
-
-| Metric               | Logistic Regression | Decision Tree |
-| -------------------- | ------------------- | ------------- |
-| **Accuracy**         | High (>90% typical) | Competitive   |
-| **Precision (Fake)** | Strong              | Strong        |
-| **Recall (Fake)**    | Strong              | Strong        |
-| **F1 Score (Fake)**  | Primary target      | Primary target|
-| **ROC-AUC**          | High                | Good          |
-| **5-Fold CV F1**     | Stable              | Stable        |
-
-**Why Logistic Regression outperforms Decision Tree on text data:**
-TF-IDF produces high-dimensional sparse features where linear separability is strong. LR exploits this directly via a linear decision boundary, while Decision Trees must construct many splits to approximate the same boundary, leading to overfitting.
-
-### Metric Definitions
-
-
-| Metric               | Definition                                                    | Priority                      |
-| -------------------- | ------------------------------------------------------------- | ----------------------------- |
-| **Precision (Fake)** | Of all articles flagged Fake, fraction that are actually Fake | Reduces false alarms          |
-| **Recall (Fake)**    | Of all actual Fake articles, fraction the model caught        | Reduces missed misinformation |
-| **F1 Score**         | Harmonic mean of Precision and Recall                         | Primary optimization target   |
-| **ROC-AUC**          | Ranking quality across all decision thresholds                | Threshold-independent         |
-
-For misinformation detection, **both Precision and Recall matter**: high Recall catches more fake news; high Precision avoids flagging real news as fake.
-
----
-
-## Application
 
 ### Prediction Path (Inference)
 
 ```
 User Input (raw text)
-    ↓
-clean_text(input)               # deterministic preprocessing
-    ↓
-pipeline.predict([cleaned])     # TF-IDF transform → classifier forward pass
+    |
+    v
+clean_text(input)                  # deterministic preprocessing
+    |
+    v
+pipeline.predict([cleaned])        # TF-IDF transform → classifier forward pass
 pipeline.predict_proba([cleaned])
-    ↓
+    |
+    v
 Verdict: Fake / Real
-Probability bar: P(Fake) = 0.XX
+Probability: P(Fake) = 0.XX
 ```
 
 ### Usage from Python
@@ -392,35 +395,89 @@ pipeline = joblib.load("model/pipeline.pkl")
 text = "Your news headline or article body here..."
 cleaned = clean_text(text)
 
-label = pipeline.predict([cleaned])[0]         # 0 = Real, 1 = Fake
-proba = pipeline.predict_proba([cleaned])[0]   # [P(Real), P(Fake)]
+label = pipeline.predict([cleaned])[0]         # 0 = Fake, 1 = Real
+proba = pipeline.predict_proba([cleaned])[0]   # [P(Fake), P(Real)]
 
-print(f"Verdict:          {'Fake' if label else 'Real'}")
-print(f"Fake probability: {proba[1]:.2%}")
+print(f"Verdict:          {'Fake' if label == 0 else 'Real'}")
+print(f"Fake probability: {proba[0]:.2%}")
 ```
 
 ---
 
-## Dashboard metrics (evaluation artifact)
+## Results
 
-The Streamlit dashboard shows **dataset statistics** and **model metrics** (accuracy, precision, recall, F1, ROC-AUC, confusion matrices, CV F1) from a single source of truth: **`model/evaluation_results.json`**. This file is **not** hardcoded; it must be generated by running the full pipeline so that numbers are correct and consistent.
+> Results are produced by running the notebook or `python scripts/run_evaluation.py`. The dashboard loads them from `model/evaluation_results.json`. No metrics are hardcoded.
 
-**To generate the artifact:**
+| Metric | Logistic Regression | Naive Bayes | Random Forest | SVM |
+| --- | --- | --- | --- | --- |
+| **Accuracy** | High | Competitive | Competitive | High |
+| **Precision / Recall / F1** | Strong | Strong | Strong | Strong |
+| **ROC-AUC** | High | Good | Good | High |
+| **5-Fold CV F1** | See artifact | See artifact | See artifact | See artifact |
 
-1. **From the notebook** — Run `notebook/news_credibility.ipynb` from top to bottom. The final section saves `model/evaluation_results.json`, `model/pipeline.pkl`, and optional plots under `plots/` (all paths at repo root).
-2. **From the command line** — With **Fake.csv** and **True.csv** in the **dataset/** folder, run:
-   ```bash
-   python scripts/run_evaluation.py
-   ```
-   This loads the data, trains both models, evaluates on the stratified test set, and saves `model/evaluation_results.json` and `model/pipeline.pkl`.
+The best model by F1 is selected and persisted to `model/pipeline.pkl`. The notebook and **Model Comparison** dashboard page display ROC curves, Precision-Recall curves, confusion matrices, and a CV F1 bar chart for all four models.
 
-If the artifact is missing, the Overview, Dataset Intelligence, and Model Comparison pages show a clear message asking you to run the notebook or script. **No hardcoded or stale metrics are shown.**
+### Metric Definitions
+
+| Metric | Definition | Why It Matters |
+| --- | --- | --- |
+| **Precision (Fake)** | Of all articles flagged Fake, the fraction that are actually Fake | Reduces false alarms on real news |
+| **Recall (Fake)** | Of all actual Fake articles, the fraction the model correctly caught | Reduces missed misinformation |
+| **F1 Score** | Harmonic mean of Precision and Recall | Primary optimization target |
+| **ROC-AUC** | Ranking quality across all decision thresholds | Threshold-independent performance measure |
+
+For misinformation detection, both Precision and Recall are critical: high Recall catches more fake news; high Precision avoids incorrectly flagging real news.
+
+---
+
+## Application
+
+### Streamlit Dashboard — News Credibility Analyzer
+
+**Live:** [https://](https://)
+
+Run locally:
+
+```bash
+streamlit run app.py
+# Opens at http://localhost:8501
+```
+
+The application consists of five pages:
+
+| Page | Description |
+| --- | --- |
+| **Overview** | Key metrics (accuracy, F1, ROC-AUC, 5-fold CV F1), dataset summary, and attribution |
+| **Dataset Intelligence** | Class distribution, text length distributions, top TF-IDF features by class |
+| **Model Comparison** | ROC curves, Precision-Recall curves, confusion matrices, CV F1 distribution, feature importance for linear models |
+| **Live Prediction Lab** | Text input with sample articles, Analyze button → Fake/Real verdict with confidence score |
+| **Architecture** | Pipeline overview and repository structure map |
+
+The app reads `model/pipeline.pkl` (best model) and `model/evaluation_results.json` (metrics). If either file is missing, the relevant pages display a clear prompt to run the training script or notebook — no stale or hardcoded data is ever shown.
+
+---
+
+## Dashboard Metrics
+
+The Streamlit dashboard displays dataset statistics and model metrics (accuracy, precision, recall, F1, ROC-AUC, confusion matrices, CV F1) from a single source of truth: `model/evaluation_results.json`.
+
+**To generate the evaluation artifact:**
+
+Option A — run `notebook/news_credibility.ipynb` from top to bottom (run from repo root so `dataset/` and `src/` are on the path). The notebook covers data loading, EDA, preprocessing, feature engineering, model training, evaluation, and artifact export.
+
+Option B — run the evaluation script directly:
+
+```bash
+python scripts/run_evaluation.py
+```
+
+This loads the data, trains all four models, evaluates on the stratified test set, selects the best by F1, and saves `model/evaluation_results.json` and `model/pipeline.pkl`.
 
 ---
 
 ## Deployment
 
-This project is structured for deployment to Streamlit Community Cloud (free tier). **Localhost-only demonstrations are not accepted per project requirements.**
+This project is structured for deployment to **Streamlit Community Cloud** (free tier). Localhost-only demonstrations are not accepted per project requirements.
 
 ### Deploy to Streamlit Community Cloud
 
@@ -432,10 +489,7 @@ git commit -m "feat: milestone 1 complete"
 git push origin main
 ```
 
-**Should you push `model/pipeline.pkl`?**Push it **only if it’s small** (e.g. a few MB) and you want a **“clone + run app”** experience with no extra setup. In that case, document in the README that **this repo includes a pre-trained model** so users can run the Streamlit app without training first. If the file is large (tens or hundreds of MB), keep it out of the repo (e.g. via `.gitignore`) and have users train the model from the notebook or download the artifact from a release/cloud storage.
-
-> If `model/pipeline.pkl` exceeds 100MB, use Git LFS:
->
+> If `model/pipeline.pkl` exceeds 100 MB, use Git LFS:
 > ```bash
 > git lfs install && git lfs track "*.pkl"
 > git add .gitattributes && git commit -m "chore: add git lfs"
@@ -443,82 +497,84 @@ git push origin main
 
 **Step 2 — Connect to Streamlit**
 
-1. Go to [share.streamlit.io](https://share.streamlit.io) and sign in with GitHub
-2. Click **New App** → select your repository
-3. Set **Branch:** `main` · **Main file:** `app.py`
-4. Click **Deploy**
+1. Go to [share.streamlit.io](https://share.streamlit.io) and sign in with GitHub.
+2. Click **New App** and select your repository.
+3. Set **Branch:** `main` and **Main file:** `app.py`.
+4. Click **Deploy**.
 
 **Step 3 — Verify**
 
-Your app will be live at `https://<username>-<repo>-app-<hash>.streamlit.app`
+Your live application will be available at the URL shown in the Streamlit Cloud dashboard.
 
 ### Environment Requirements
 
+| Requirement | Value |
+| --- | --- |
+| Python | 3.8 or higher |
+| GPU | Not required |
+| RAM | ~512 MB (model and vectorizer in memory) |
+| Storage | ~100–200 MB (pipeline.pkl) |
+
+### Dependencies (`requirements.txt`)
+
 ```
-Python:  3.8+
-GPU:     Not required
-RAM:     ~512MB (model + vectorizer in memory)
-Storage: ~100–200MB (pipeline.pkl)
+streamlit
+scikit-learn
+pandas
+numpy
+nltk
+joblib
+plotly
 ```
 
-### `requirements.txt`
+Install with:
 
-```
-streamlit>=1.28
-scikit-learn>=1.3
-pandas>=2.0
-numpy>=1.24
-nltk>=3.8
-joblib>=1.3
-plotly>=5.0
+```bash
+pip install -r requirements.txt
 ```
 
 ---
 
 ## Limitations
 
-
-| Area            | Limitation                                                                                   |
-| --------------- | -------------------------------------------------------------------------------------------- |
-| **Language**    | Preprocessing uses English NLTK resources; dataset is English (title + text)     |
-| **Domain**      | Trained on Kaggle Fake and Real News; may not generalize to other domains       |
-| **Task**        | Binary classification only (Fake/Real); no multi-label (satire, misleading, out-of-context)  |
-| **Temporal**    | Random train/test split; performance may be overstated if distribution shifts over time      |
-| **Model**       | Classical TF-IDF + LR/DT; not state-of-the-art versus fine-tuned transformer classifiers     |
-| **Calibration** | `predict_proba` outputs are not formally calibrated (no Platt scaling / isotonic regression) |
+| Area | Limitation |
+| --- | --- |
+| **Language** | Preprocessing uses English NLTK resources; the dataset is English-only |
+| **Domain** | Trained on the Kaggle Fake and Real News corpus; may not generalize to other domains or topics |
+| **Task Scope** | Binary classification only (Fake/Real); no multi-label support for satire, misleading framing, or out-of-context articles |
+| **Temporal Generalization** | Random train/test split; performance may be overstated if the news distribution shifts over time |
+| **Model Ceiling** | Classical TF-IDF with LR/SVM; not state-of-the-art compared to fine-tuned transformer models |
+| **Probability Calibration** | `predict_proba` outputs are not formally calibrated (no Platt scaling or isotonic regression applied) |
 
 ---
 
 ## Future Work — Milestone 2 (Agentic AI)
 
-Milestone 2 extends this system into an **autonomous misinformation monitoring assistant** using LangGraph:
+Milestone 2 will extend this system into an **autonomous misinformation monitoring assistant** using LangGraph with the following capabilities:
 
-- **Agentic fact-checking** — LangGraph workflow with RAG retrieval (Chroma/FAISS) against fact-checking corpora
-- **LLM reasoning** — structured credibility assessments with source cross-referencing and hallucination reduction
-- **Multi-label classification** — expand from binary to categories: satire, misleading, out-of-context, unverified
-- **Calibration** — Platt scaling for well-calibrated probability outputs
-- **REST API** — batch inference endpoint for integration into content moderation pipelines
-- **Transformer baseline** — fine-tuned IndicBERT or mBERT for comparison against TF-IDF + LR
+**Agentic fact-checking** via a LangGraph workflow with RAG retrieval (Chroma/FAISS) against fact-checking corpora. **LLM reasoning** for structured credibility assessments with source cross-referencing and hallucination reduction. **Multi-label classification** expanding from binary labels to categories: satire, misleading, out-of-context, unverified. **Calibration** using Platt scaling for well-calibrated probability outputs. **REST API** for batch inference and integration into content moderation pipelines. **Transformer baseline** using fine-tuned IndicBERT or mBERT for comparison against the TF-IDF approach.
 
 ---
 
 ## Milestone 1 Deliverables Checklist
 
-- [X]  Problem understanding & media use-case documented
-- [X]  Input–output specification (`text → credibility label + probability`)
-- [X]  System architecture diagram
-- [X]  Working Streamlit application with UI
-- [X]  Model performance evaluation report (Precision · Recall · F1 · ROC-AUC · CV)
-- [X]  Two models trained and compared (Logistic Regression · Decision Tree)
-- [X]  Confusion matrices and ROC curves
-- [X]  TF-IDF feature interpretability (top fake/real words)
-- [ ]  Publicly hosted application URL _(post-deployment)_
+- [x] Problem understanding and media use-case documented
+- [x] Input-output specification (`text → credibility label + probability`)
+- [x] System architecture diagram
+- [x] Working Streamlit application (**News Credibility Analyzer**) with multi-page UI
+- [x] Model performance evaluation report (Precision · Recall · F1 · ROC-AUC · CV F1)
+- [x] Multiple models trained and compared (Logistic Regression · Naive Bayes · Random Forest · SVM)
+- [x] Confusion matrices, ROC curves, and Precision-Recall curves
+- [x] TF-IDF feature interpretability (top fake/real indicative terms)
+- [x] Dataset attribution (Kaggle Fake and Real News) in app and README
+- [x] Publicly hosted application URL — [https://](https://)
 
 ---
 
 <div align="center">
 
-**Project 11 · Intelligent News Credibility Analysis & Agentic Misinformation Monitoring**
+**Project 11 · Intelligent News Credibility Analysis and Agentic Misinformation Monitoring**
+
 Milestone 1 — ML-Based Classification · Built with scikit-learn · Deployed on Streamlit
 
 </div>

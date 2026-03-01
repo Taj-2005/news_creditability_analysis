@@ -37,10 +37,16 @@ def render():
     total = stats.get("after_drop_empty") or stats.get("total_samples")
     class_counts = stats.get("class_counts") or {}
     class_pct = stats.get("class_pct") or {}
-    fake_count = class_counts.get("Fake", 0)
-    real_count = class_counts.get("Real", 0)
-    fake_pct = class_pct.get("Fake", 0)
-    real_pct = class_pct.get("Real", 0)
+    # Support both "Fake"/"Real" and numeric keys (0/1)
+    fake_count = class_counts.get("Fake") or class_counts.get(0) or 0
+    real_count = class_counts.get("Real") or class_counts.get(1) or 0
+    fake_count = int(fake_count) if fake_count is not None else 0
+    real_count = int(real_count) if real_count is not None else 0
+    fake_pct = class_pct.get("Fake") or class_pct.get(0) or (fake_count / total if total else 0)
+    real_pct = class_pct.get("Real") or class_pct.get(1) or (real_count / total if total else 0)
+    if total and (fake_count + real_count) > 0 and abs((fake_pct or 0) + (real_pct or 0) - 1.0) > 0.01:
+        fake_pct = fake_count / (fake_count + real_count)
+        real_pct = real_count / (fake_count + real_count)
 
     # Top metrics row — all from artifact
     col1, col2, col3 = st.columns(3)

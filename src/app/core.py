@@ -76,6 +76,15 @@ EXAMPLE_TEXTS = {
         "Secret government weather control project exposed. "
         "Whistleblower reveals classified program allegedly used to manipulate natural disasters."
     ),
+    "Fake example": (
+        "BREAKING: Celebrity DEAD in shocking accident! You won't believe what happened next. "
+        "Doctors are hiding the truth. Share before it gets deleted! Click here for the full story."
+    ),
+    "Real example": (
+        "WASHINGTON (Reuters) - The Federal Reserve left interest rates unchanged on Wednesday "
+        "and signaled it remains on track to raise borrowing costs gradually, with policymakers "
+        "pointing to a solid economy and rising inflation."
+    ),
 }
 
 

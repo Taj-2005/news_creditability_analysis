@@ -42,8 +42,21 @@ APP_CSS = """
     font-weight: 500;
     transition: box-shadow 0.2s, background-color 0.2s;
   }
+  .stButton > button[kind="primary"],
+  .stButton > button[kind="primary"] *,
+  button[kind="primary"],
+  button[kind="primary"] * {
+    color: #ffffff !important;
+    border-color: transparent;
+  }
   .stButton > button[kind="primary"] { background-color: #2563eb; }
-  .stButton > button[kind="primary"]:hover { background-color: #1d4ed8; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3); }
+  .stButton > button[kind="primary"]:hover,
+  button[kind="primary"]:hover {
+    background-color: #1d4ed8;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+  }
+  .stButton > button[kind="primary"]:hover *,
+  button[kind="primary"]:hover * { color: #ffffff !important; }
   
   /* Text area */
   .stTextArea textarea { border-radius: 10px; border: 1px solid #e5e7eb; }
@@ -60,11 +73,16 @@ APP_CSS = """
   #MainMenu { visibility: hidden; }
   footer { visibility: hidden; }
   
-  /* Force light text everywhere — no dark/black */
+  /* Force light text everywhere — no dark/black (exclude primary button) */
   .stCaption, [data-testid="stCaptionContainer"] { color: #6b7280 !important; }
-  label { color: #374151 !important; }
+  label:not(button *):not([for]) { color: #374151 !important; }
   .stRadio label, .stCheckbox label { color: #4b5563 !important; }
   input, textarea { color: #374151 !important; background-color: #ffffff !important; }
+  /* Primary button text must stay white (override theme textColor) */
+  div[data-testid="stHorizontalBlock"] .stButton > button[kind="primary"],
+  div[data-testid="stHorizontalBlock"] .stButton > button[kind="primary"] *,
+  .stButton > button[kind="primary"],
+  .stButton > button[kind="primary"] * { color: #ffffff !important; fill: #ffffff !important; -webkit-text-fill-color: #ffffff !important; }
 </style>
 """
 
