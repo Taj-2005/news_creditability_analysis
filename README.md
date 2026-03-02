@@ -4,6 +4,12 @@
 
 ### Intelligent Misinformation Detection via Classical NLP and Machine Learning
 
+[![Python](https://img.shields.io/badge/Python-3.8%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![scikit-learn](https://img.shields.io/badge/scikit--learn-1.x-F7931E?style=flat-square&logo=scikitlearn&logoColor=white)](https://scikit-learn.org)
+[![Streamlit](https://img.shields.io/badge/Streamlit-Deployed-FF4B4B?style=flat-square&logo=streamlit&logoColor=white)](https://streamlit.io)
+[![License](https://img.shields.io/badge/License-MIT-22C55E?style=flat-square)](LICENSE)
+[![Dataset](https://img.shields.io/badge/Dataset-Fake%20%26%20Real%20News%20(Kaggle)-6366F1?style=flat-square)](https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset)
+
 **Project 11 · Milestone 1 · AI/ML Systems**
 
 [Overview](#overview) · [Architecture](#system-architecture) · [Quickstart](#quickstart) · [ML Pipeline](#ml-pipeline) · [Results](#results) · [Deployment](#deployment) · [Limitations](#limitations)
