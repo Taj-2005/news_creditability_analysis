@@ -32,7 +32,7 @@ def clean_text(
     """
     Full text preprocessing pipeline for news text.
 
-    Steps: lowercase, remove URLs and @mentions, keep only letters,
+    Steps: lowercase keep only letters,
     normalize whitespace, tokenize, remove stopwords and short tokens,
     lemmatize.
 

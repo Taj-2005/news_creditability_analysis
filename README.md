@@ -14,7 +14,7 @@
 
 [Overview](#overview) · [Architecture](#system-architecture) · [Quickstart](#quickstart) · [ML Pipeline](#ml-pipeline) · [Results](#results) · [Deployment](#deployment) · [Limitations](#limitations)
 
-**Live Application:** [Demo](https://news-creditability.streamlit.app/)
+**Live Application:** [Demo](https://news-creditability.streamlit.app/) · **Video Walkthrough:** [Watch on YouTube](https://youtu.be/U1Nnd-8Odbs?si=5IFfdhePuDTRlmCg)
 
 </div>
 
