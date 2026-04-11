@@ -16,6 +16,7 @@ class AgentState(TypedDict, total=False):
         raw_text: Original user input.
         cleaned_text: Normalized text after preprocessing.
         ml_label: Binary classifier output (0=Fake, 1=Real) when available.
+        ml_confidence: Predicted-class probability (same as ml_p_real if label==1, else ml_p_fake).
         ml_p_fake: Estimated probability or score for Fake class.
         ml_p_real: Estimated probability or score for Real class.
         queries: Search queries for retrieval (future RAG).
@@ -28,6 +29,7 @@ class AgentState(TypedDict, total=False):
     raw_text: str
     cleaned_text: str
     ml_label: int
+    ml_confidence: float
     ml_p_fake: float
     ml_p_real: float
     queries: List[str]
