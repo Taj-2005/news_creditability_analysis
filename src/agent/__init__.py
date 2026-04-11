@@ -1,11 +1,16 @@
 """
 Agent orchestration package (Milestone 2).
 
-Provides state schema, graph wiring, and node stubs. The existing ML pipeline
-in ``src.features``, ``src.models``, and ``src.app.core`` remains unchanged;
-nodes will integrate via explicit calls in a later implementation phase.
+LangGraph workflow composes normalize → ML → optional RAG → report without
+modifying training code under ``src.features`` / ``src.models``.
 """
 
-from src.agent.state import AgentState
+from src.agent.graph import build_graph, invoke_credibility_agent
+from src.agent.state import AgentState, DEFAULT_LOW_CONFIDENCE_THRESHOLD
 
-__all__ = ["AgentState"]
+__all__ = [
+    "AgentState",
+    "DEFAULT_LOW_CONFIDENCE_THRESHOLD",
+    "build_graph",
+    "invoke_credibility_agent",
+]

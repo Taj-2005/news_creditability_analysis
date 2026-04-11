@@ -1,11 +1,13 @@
 """
-Typed agent state for LangGraph-style workflows.
+Typed agent state for LangGraph workflows.
 
-Defines the fields that nodes will read and update. Values are placeholders
-until Milestone 2 wiring is implemented.
+Nodes return partial dicts that LangGraph merges into this state between steps.
 """
 
 from typing import Any, Dict, List, Optional, TypedDict
+
+# ML confidence below this routes through RAG → verify → report.
+DEFAULT_LOW_CONFIDENCE_THRESHOLD = 0.65
 
 
 class AgentState(TypedDict, total=False):
@@ -19,11 +21,12 @@ class AgentState(TypedDict, total=False):
         ml_confidence: Predicted-class probability (same as ml_p_real if label==1, else ml_p_fake).
         ml_p_fake: Estimated probability or score for Fake class.
         ml_p_real: Estimated probability or score for Real class.
-        queries: Search queries for retrieval (future RAG).
-        retrieved_chunks: Evidence snippets from the vector store.
-        verification: Structured verifier output (claims vs evidence).
-        final_report: Structured or rendered report for the UI.
-        error: Non-empty if a node failed; graph may short-circuit.
+        queries: Search queries for retrieval (reserved for future LLM planner).
+        retrieved_chunks: Top-k RAG hits; each item includes text, score, id, metadata.
+        rag_error: Set when the retriever skips or fails (index missing, etc.).
+        verification: Structured verifier output (placeholder until LLM).
+        final_report: Structured payload for UI / export.
+        error: Normalize / ML failure message; graph still reaches ``report``.
     """
 
     raw_text: str
@@ -34,6 +37,7 @@ class AgentState(TypedDict, total=False):
     ml_p_real: float
     queries: List[str]
     retrieved_chunks: List[Dict[str, Any]]
+    rag_error: Optional[str]
     verification: Dict[str, Any]
     final_report: Dict[str, Any]
     error: Optional[str]

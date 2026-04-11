@@ -1,28 +1,34 @@
 """
 Normalize node: raw user text → cleaned text for downstream ML and RAG.
 
-Will delegate to shared preprocessing (e.g. ``clean_text``) without
-duplicating logic. No implementation in this scaffolding phase.
+Delegates to ``clean_text`` in ``src.features.preprocessing`` (same as training
+and Streamlit inference).
 """
 
 from typing import Any, Dict
 
 from src.agent.state import AgentState
+from src.features.preprocessing import clean_text
 
 
 def run_normalize_node(state: AgentState, **_kwargs: Any) -> Dict[str, Any]:
     """
-    Produce a partial state update with ``cleaned_text`` derived from ``raw_text``.
+    Produce ``cleaned_text`` from ``raw_text`` using shared preprocessing.
 
     Args:
-        state: Current graph state; must include ``raw_text`` when implemented.
-        **_kwargs: Reserved for future dependencies (e.g. custom stopword sets).
+        state: Must include non-empty ``raw_text`` after strip.
+        **_kwargs: Reserved.
 
     Returns:
-        A mapping of state keys to merge into the graph state (e.g.
-        ``{"cleaned_text": "..."}``). Currently returns an empty dict.
+        Partial state with ``cleaned_text``, or ``error`` if input is missing.
     """
-    return {}
+    raw = (state.get("raw_text") or "").strip()
+    if not raw:
+        return {
+            "error": "normalize: raw_text is required and cannot be empty.",
+            "cleaned_text": "",
+        }
+    return {"cleaned_text": clean_text(raw)}
 
 
 def describe_normalize_step() -> str:

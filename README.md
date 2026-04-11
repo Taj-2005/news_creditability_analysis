@@ -232,13 +232,15 @@ news_creditability_analysis/
     │   ├── results_loader.py            # Loads evaluation_results.json for dashboard
     │   ├── plotly_viz.py               # Plotly charts (ROC, PR curve, confusion matrix, gauge)
     │   └── visualization.py
-    ├── agent/                          # Milestone 2 — agent orchestration (scaffold; does not replace ML)
-    │   ├── state.py                    # AgentState TypedDict for graph workflows
-    │   ├── graph.py                    # build_graph() — workflow wiring (placeholder)
+    ├── agent/                          # Milestone 2 — LangGraph agent (does not replace ML training code)
+    │   ├── state.py                    # AgentState + DEFAULT_LOW_CONFIDENCE_THRESHOLD
+    │   ├── graph.py                    # build_graph(), invoke_credibility_agent() — normalize → ML → RAG? → report
     │   └── nodes/
-    │       ├── normalize.py            # Raw text → cleaned text node
+    │       ├── normalize.py            # clean_text; ml_classify.py → core.run_prediction
     │       ├── ml_classify.py          # Calls existing TF-IDF + classifier path
-    │       └── report.py               # Final report / synthesis node
+    │       ├── retrieve.py             # FAISS top-k (data/rag)
+    │       ├── verify.py               # Placeholder verifier (no LLM yet)
+    │       └── report.py               # final_report JSON for UI
     ├── rag/                            # Local RAG — MiniLM + FAISS (Milestone 2)
     │   ├── embeddings.py               # sentence-transformers MiniLM, L2-normalized vectors
     │   ├── store.py                    # FAISS IndexFlatIP + chunks.json persistence

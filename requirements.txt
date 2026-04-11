@@ -7,3 +7,4 @@ joblib
 plotly
 sentence-transformers
 faiss-cpu
+langgraph
