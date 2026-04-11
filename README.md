@@ -208,7 +208,8 @@ news_creditability_analysis/
 ├── notebook/
 │   └── news_credibility.ipynb          # Full pipeline: load, EDA, preprocess, train, evaluate, save
 ├── scripts/
-│   └── run_evaluation.py               # Train all models, select best by F1, save artifacts
+│   ├── run_evaluation.py               # Train all models, select best by F1, save artifacts
+│   └── build_rag_index.py              # Build local MiniLM + FAISS index under data/rag/
 ├── dataset/
 │   ├── Fake.csv                        # Kaggle fake news corpus
 │   └── True.csv                        # Kaggle real news corpus
@@ -216,6 +217,8 @@ news_creditability_analysis/
 │   ├── pipeline.pkl                    # Best model (TF-IDF + classifier)
 │   └── evaluation_results.json         # Metrics and dataset stats (generated at runtime)
 ├── plots/                              # EDA and evaluation figures
+├── data/
+│   └── rag/                            # Generated: faiss.index + chunks.json (see scripts/build_rag_index.py)
 └── src/
     ├── __init__.py
     ├── data/
@@ -236,6 +239,10 @@ news_creditability_analysis/
     │       ├── normalize.py            # Raw text → cleaned text node
     │       ├── ml_classify.py          # Calls existing TF-IDF + classifier path
     │       └── report.py               # Final report / synthesis node
+    ├── rag/                            # Local RAG — MiniLM + FAISS (Milestone 2)
+    │   ├── embeddings.py               # sentence-transformers MiniLM, L2-normalized vectors
+    │   ├── store.py                    # FAISS IndexFlatIP + chunks.json persistence
+    │   └── retrieve.py                 # Top-k similarity search
     ├── utils/
     └── app/
         ├── core.py                     # load_model(), run_prediction(), validation

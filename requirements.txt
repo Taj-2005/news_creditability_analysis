@@ -5,3 +5,5 @@ numpy
 nltk
 joblib
 plotly
+sentence-transformers
+faiss-cpu
