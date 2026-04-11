@@ -229,6 +229,13 @@ news_creditability_analysis/
     │   ├── results_loader.py            # Loads evaluation_results.json for dashboard
     │   ├── plotly_viz.py               # Plotly charts (ROC, PR curve, confusion matrix, gauge)
     │   └── visualization.py
+    ├── agent/                          # Milestone 2 — agent orchestration (scaffold; does not replace ML)
+    │   ├── state.py                    # AgentState TypedDict for graph workflows
+    │   ├── graph.py                    # build_graph() — workflow wiring (placeholder)
+    │   └── nodes/
+    │       ├── normalize.py            # Raw text → cleaned text node
+    │       ├── ml_classify.py          # Calls existing TF-IDF + classifier path
+    │       └── report.py               # Final report / synthesis node
     ├── utils/
     └── app/
         ├── core.py                     # load_model(), run_prediction(), validation
@@ -481,9 +488,9 @@ Option A — run `notebook/news_credibility.ipynb` from top to bottom (run from 
 
 Option B — run the evaluation script directly:
 
-```bash
-python scripts/run_evaluation.py
-```
+   ```bash
+   python scripts/run_evaluation.py
+   ```
 
 This loads the data, trains all four models, evaluates on the stratified test set, selects the best by F1, and saves `model/evaluation_results.json` and `model/pipeline.pkl`.
 
