@@ -27,7 +27,8 @@ class AgentState(TypedDict, total=False):
         rag_error: Set when the retriever skips or fails (index missing, etc.).
         verification: Verifier output; always includes ``supported``, ``contradicted``,
             ``unknown`` (each a ``list[str]``), plus ``mode``, ``llm``, ``chunks_reviewed``.
-        final_report: Structured payload for UI / export (includes optional ``llm_summary``).
+        final_report: UI payload with ``summary``, ``risk_factors``, ``fact_checks``,
+            ``verdict``, ``confidence`` (see ``src.agent.ui_report``).
         error: Normalize / ML failure message; graph still reaches ``report``.
     """
 

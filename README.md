@@ -236,13 +236,14 @@ news_creditability_analysis/
     │   ├── state.py                    # AgentState + DEFAULT_LOW_CONFIDENCE_THRESHOLD
     │   ├── graph.py                    # build_graph(), invoke_credibility_agent()
     │   ├── llm_service.py              # Groq generate(); GROQ_API_KEY, optional GROQ_MODEL
+    │   ├── ui_report.py                # build_ui_final_report() — UI dict (summary, risk_factors, …)
     │   └── nodes/
     │       ├── normalize.py            # clean_text; ml_classify → core.run_prediction
     │       ├── ml_classify.py          # TF-IDF + classifier via core
     │       ├── plan_queries.py         # Groq: RAG search queries (low-confidence path)
     │       ├── retrieve.py             # FAISS top-k (data/rag)
     │       ├── verify.py               # Groq → JSON {supported, contradicted, unknown} vs evidence
-    │       └── report.py               # final_report + optional Groq narrative
+    │       └── report.py               # final_report via ui_report (ML + verification)
     ├── rag/                            # Local RAG — MiniLM + FAISS (Milestone 2)
     │   ├── embeddings.py               # sentence-transformers MiniLM, L2-normalized vectors
     │   ├── store.py                    # FAISS IndexFlatIP + chunks.json persistence
@@ -382,24 +383,24 @@ If `GROQ_API_KEY` is missing, **plan_queries** falls back to text-window queries
 
 ### D. LangGraph agent (normalize → ML → optional RAG + LLM → report)
 
-The compiled graph is in `src/agent/graph.py`. **Low confidence** path: `plan_queries` (Groq) → `retrieve` (FAISS) → `verify` (Groq) → `report` (Groq summary). **High confidence** path: `report` only (still attempts a Groq summary).
+The compiled graph is in `src/agent/graph.py`. **Low confidence** path: `plan_queries` (Groq) → `retrieve` (FAISS) → `verify` (Groq) → `report`. **High confidence** path: `report` only (still may refresh the narrative summary via Groq).
 
 **Verification output** (`state["verification"]` after the verify node): always includes three string lists — **`supported`**, **`contradicted`**, **`unknown`** — plus **`mode`** (`structured` | `no_evidence` | `fallback`), **`llm`**, **`chunks_reviewed`**, and **`top_scores`**. The LLM is instructed to return JSON only; the node parses, normalizes (caps length/count, dedupes), and fills safe fallbacks if parsing or the API fails.
+
+**Final report** (`out["final_report"]` — UI-oriented, built in `src/agent/ui_report.py`): exactly **`summary`** (string), **`risk_factors`** (string list), **`fact_checks`** (list of `{ "status", "finding" }` rows), **`verdict`** (`Fake` | `Real` | `Unknown`), **`confidence`** (one human-readable line). You can also call **`build_ui_final_report(state_dict)`** outside the graph.
 
 From the **repository root**, with `model/pipeline.pkl`, optional `data/rag/`, and `GROQ_API_KEY` set:
 
 ```bash
 python -c "
 from src.agent.graph import invoke_credibility_agent
+import json
 out = invoke_credibility_agent(
     'WASHINGTON (Reuters) - The Federal Reserve left interest rates unchanged.',
     confidence_threshold=0.65,
 )
 fr = out.get('final_report', {})
-print(fr.get('verdict'), fr.get('ml_confidence'))
-print('RAG path used:', fr.get('rag_path_used'))
-print('LLM summary present:', bool(fr.get('llm_summary')))
-print('Verification keys:', list((out.get('verification') or {}).keys())[:8])
+print(json.dumps(fr, indent=2, ensure_ascii=False)[:1200])
 "
 ```
 
