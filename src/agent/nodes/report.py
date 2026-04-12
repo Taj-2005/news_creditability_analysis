@@ -40,12 +40,18 @@ def run_report_node(state: AgentState, **_kwargs: Any) -> Dict[str, Any]:
     }
 
     # --- LLM narrative (Groq) for any path that reached report ---
+    ver = state.get("verification") or {}
     summary_payload = {
         "verdict": verdict,
         "ml_confidence": conf,
         "rag_path_used": rag_path_used,
-        "verification_mode": (state.get("verification") or {}).get("mode"),
+        "verification_mode": ver.get("mode"),
         "top_query": (state.get("queries") or [None])[0],
+        "verification_claims": {
+            "supported": (ver.get("supported") or [])[:5],
+            "contradicted": (ver.get("contradicted") or [])[:5],
+            "unknown": (ver.get("unknown") or [])[:5],
+        },
     }
     prompt = (
         "Write a concise credibility briefing (3–5 short paragraphs) for a technical reader. "
@@ -54,11 +60,9 @@ def run_report_node(state: AgentState, **_kwargs: Any) -> Dict[str, Any]:
         "ARTICLE_PREVIEW:\n"
         f"{(state.get('cleaned_text') or state.get('raw_text') or '')[:1200]}\n"
     )
-    if state.get("verification", {}).get("analysis"):
-        prompt += (
-            "\nVERIFICATION_ANALYSIS:\n"
-            f"{str(state['verification']['analysis'])[:2500]}\n"
-        )
+    vc = summary_payload["verification_claims"]
+    if any(vc.get(k) for k in ("supported", "contradicted", "unknown")):
+        prompt += "\nVERIFICATION_CLAIMS_JSON:\n" + json.dumps(vc, ensure_ascii=False) + "\n"
 
     try:
         from src.agent.llm_service import generate

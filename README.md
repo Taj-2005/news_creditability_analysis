@@ -241,7 +241,7 @@ news_creditability_analysis/
     │       ├── ml_classify.py          # TF-IDF + classifier via core
     │       ├── plan_queries.py         # Groq: RAG search queries (low-confidence path)
     │       ├── retrieve.py             # FAISS top-k (data/rag)
-    │       ├── verify.py               # Groq: evidence vs excerpt
+    │       ├── verify.py               # Groq → JSON {supported, contradicted, unknown} vs evidence
     │       └── report.py               # final_report + optional Groq narrative
     ├── rag/                            # Local RAG — MiniLM + FAISS (Milestone 2)
     │   ├── embeddings.py               # sentence-transformers MiniLM, L2-normalized vectors
@@ -368,7 +368,7 @@ This embeds a small built-in sample corpus, writes **`data/rag/faiss.index`** an
 
 ### C. Groq API (LLM reasoning)
 
-The agent uses **Groq** for query planning, verification, and the narrative summary in `src/agent/llm_service.py` (`generate(prompt) -> str`).
+The agent uses **Groq** for query planning, verification, and the narrative summary in `src/agent/llm_service.py`. Call **`generate(prompt, *, temperature=0.2, max_tokens=2048)`**; verification uses **`temperature=0.0`** for deterministic JSON-style outputs.
 
 1. Create a key at [Groq Console](https://console.groq.com/keys).
 2. Export it or use a `.env` file in the repo root (see **`.env.example`**). `python-dotenv` loads `.env` automatically when the LLM module is first used.
@@ -378,11 +378,13 @@ The agent uses **Groq** for query planning, verification, and the narrative summ
 | `GROQ_API_KEY` | Yes (for LLM output) | Secret key from Groq. |
 | `GROQ_MODEL` | No | Chat model id; default **`llama-3.1-8b-instant`**. |
 
-If `GROQ_API_KEY` is missing, **plan_queries** and **verify** fall back to heuristics / error notes, and **report** still returns structured fields with `llm_summary=None` and `llm_report_error` set.
+If `GROQ_API_KEY` is missing, **plan_queries** falls back to text-window queries; **verify** returns **`supported` / `contradicted` / `unknown`** lists with a deterministic **`unknown`** note (and **`llm_error`**). **report** still returns structured fields; **`llm_summary`** may be `null` with **`llm_report_error`** set.
 
 ### D. LangGraph agent (normalize → ML → optional RAG + LLM → report)
 
 The compiled graph is in `src/agent/graph.py`. **Low confidence** path: `plan_queries` (Groq) → `retrieve` (FAISS) → `verify` (Groq) → `report` (Groq summary). **High confidence** path: `report` only (still attempts a Groq summary).
+
+**Verification output** (`state["verification"]` after the verify node): always includes three string lists — **`supported`**, **`contradicted`**, **`unknown`** — plus **`mode`** (`structured` | `no_evidence` | `fallback`), **`llm`**, **`chunks_reviewed`**, and **`top_scores`**. The LLM is instructed to return JSON only; the node parses, normalizes (caps length/count, dedupes), and fills safe fallbacks if parsing or the API fails.
 
 From the **repository root**, with `model/pipeline.pkl`, optional `data/rag/`, and `GROQ_API_KEY` set:
 
@@ -397,6 +399,7 @@ fr = out.get('final_report', {})
 print(fr.get('verdict'), fr.get('ml_confidence'))
 print('RAG path used:', fr.get('rag_path_used'))
 print('LLM summary present:', bool(fr.get('llm_summary')))
+print('Verification keys:', list((out.get('verification') or {}).keys())[:8])
 "
 ```
 

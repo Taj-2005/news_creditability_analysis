@@ -25,7 +25,8 @@ class AgentState(TypedDict, total=False):
         llm_query_error: Populated when Groq query planning fails (fallback queries used).
         retrieved_chunks: Top-k RAG hits; each item includes text, score, id, metadata.
         rag_error: Set when the retriever skips or fails (index missing, etc.).
-        verification: Verifier output (LLM analysis or fallback metadata).
+        verification: Verifier output; always includes ``supported``, ``contradicted``,
+            ``unknown`` (each a ``list[str]``), plus ``mode``, ``llm``, ``chunks_reviewed``.
         final_report: Structured payload for UI / export (includes optional ``llm_summary``).
         error: Normalize / ML failure message; graph still reaches ``report``.
     """

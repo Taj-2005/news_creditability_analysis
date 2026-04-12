@@ -32,12 +32,19 @@ def _maybe_load_dotenv() -> None:
 DEFAULT_GROQ_MODEL = "llama-3.1-8b-instant"
 
 
-def generate(prompt: str) -> str:
+def generate(
+    prompt: str,
+    *,
+    temperature: float = 0.2,
+    max_tokens: int = 2048,
+) -> str:
     """
     Run a single-turn chat completion against the Groq API.
 
     Args:
         prompt: Full user message (instructions + content).
+        temperature: Sampling temperature (use ``0.0`` for deterministic verification).
+        max_tokens: Maximum completion tokens.
 
     Returns:
         Trimmed assistant text.
@@ -64,8 +71,8 @@ def generate(prompt: str) -> str:
     completion = client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt.strip()}],
-        max_tokens=2048,
-        temperature=0.2,
+        max_tokens=max_tokens,
+        temperature=float(temperature),
     )
     choice = completion.choices[0].message
     text = (choice.content or "").strip()
