@@ -8,3 +8,5 @@ plotly
 sentence-transformers
 faiss-cpu
 langgraph
+groq
+python-dotenv

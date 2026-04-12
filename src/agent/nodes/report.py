@@ -1,7 +1,10 @@
 """
-Report node: merge ML, optional RAG hits, and verification into ``final_report``.
+Report node: merge ML, RAG, and verification; optional Groq narrative summary.
 """
 
+from __future__ import annotations
+
+import json
 from typing import Any, Dict
 
 from src.agent.state import AgentState
@@ -9,14 +12,7 @@ from src.agent.state import AgentState
 
 def run_report_node(state: AgentState, **_kwargs: Any) -> Dict[str, Any]:
     """
-    Build a structured ``final_report`` for UI or export.
-
-    Args:
-        state: Full accumulated state from prior nodes.
-        **_kwargs: Reserved (e.g. template id).
-
-    Returns:
-        Partial update ``{"final_report": {...}}``.
+    Build ``final_report`` and optionally append an LLM-generated narrative summary.
     """
     ml_label = state.get("ml_label")
     if ml_label is None:
@@ -25,7 +21,6 @@ def run_report_node(state: AgentState, **_kwargs: Any) -> Dict[str, Any]:
         verdict = "Fake" if int(ml_label) == 0 else "Real"
 
     conf = state.get("ml_confidence")
-    # Retrieve node always emits ``retrieved_chunks`` when it runs (low-confidence path).
     rag_path_used = "retrieved_chunks" in state
 
     final_report: Dict[str, Any] = {
@@ -37,10 +32,43 @@ def run_report_node(state: AgentState, **_kwargs: Any) -> Dict[str, Any]:
         "cleaned_text_preview": (state.get("cleaned_text") or "")[:500],
         "retrieved_chunks": state.get("retrieved_chunks") or [],
         "verification": state.get("verification") or {},
+        "queries": state.get("queries") or [],
         "error": state.get("error"),
         "rag_error": state.get("rag_error"),
+        "llm_query_error": state.get("llm_query_error"),
         "rag_path_used": rag_path_used,
     }
+
+    # --- LLM narrative (Groq) for any path that reached report ---
+    summary_payload = {
+        "verdict": verdict,
+        "ml_confidence": conf,
+        "rag_path_used": rag_path_used,
+        "verification_mode": (state.get("verification") or {}).get("mode"),
+        "top_query": (state.get("queries") or [None])[0],
+    }
+    prompt = (
+        "Write a concise credibility briefing (3–5 short paragraphs) for a technical reader. "
+        "Use only the JSON facts below; do not invent sources. Mention uncertainty if RAG was not used.\n\n"
+        f"FACTS_JSON:\n{json.dumps(summary_payload, indent=2)}\n\n"
+        "ARTICLE_PREVIEW:\n"
+        f"{(state.get('cleaned_text') or state.get('raw_text') or '')[:1200]}\n"
+    )
+    if state.get("verification", {}).get("analysis"):
+        prompt += (
+            "\nVERIFICATION_ANALYSIS:\n"
+            f"{str(state['verification']['analysis'])[:2500]}\n"
+        )
+
+    try:
+        from src.agent.llm_service import generate
+
+        final_report["llm_summary"] = generate(prompt)
+        final_report["llm_report_error"] = None
+    except Exception as exc:
+        final_report["llm_summary"] = None
+        final_report["llm_report_error"] = str(exc)
+
     return {"final_report": final_report}
 
 

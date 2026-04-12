@@ -1,8 +1,8 @@
 """
-LangGraph workflow: normalize → ML → (optional RAG) → report.
+LangGraph workflow: normalize → ML → (optional plan_queries + RAG + verify) → report.
 
-Low ML confidence routes through retrieve → verify (placeholder) → report;
-high confidence goes directly to report.
+Low ML confidence: plan_queries (Groq) → retrieve → verify (Groq) → report (Groq summary).
+High confidence: report only (still uses Groq for narrative when configured).
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ from langgraph.graph import END, START, StateGraph
 
 from src.agent.nodes.ml_classify import run_ml_classify_node
 from src.agent.nodes.normalize import run_normalize_node
+from src.agent.nodes.plan_queries import run_plan_queries_node
 from src.agent.nodes.report import run_report_node
 from src.agent.nodes.retrieve import run_retrieve_node
 from src.agent.nodes.verify import run_verify_node
@@ -24,9 +25,9 @@ def _route_after_ml(
     state: AgentState,
     *,
     threshold: float,
-) -> Literal["retrieve", "report"]:
+) -> Literal["plan_queries", "report"]:
     """
-    Branch after ``ml_classify``: low confidence → RAG path; else → report only.
+    Branch after ``ml_classify``: low confidence → query planning + RAG path.
 
     On ML or upstream errors, skip retrieval and still produce a report.
     """
@@ -36,7 +37,7 @@ def _route_after_ml(
     if conf is None:
         return "report"
     if float(conf) < float(threshold):
-        return "retrieve"
+        return "plan_queries"
     return "report"
 
 
@@ -53,7 +54,7 @@ def build_graph(
     Args:
         pipeline: Optional sklearn pipeline for tests; default loads via ``core.load_model``.
         store_dir: RAG index directory (default ``<repo>/data/rag``).
-        confidence_threshold: Below this ``ml_confidence``, run retrieve → verify.
+        confidence_threshold: Below this ``ml_confidence``, run plan_queries → retrieve → verify.
         top_k: RAG hits when the retrieval path runs.
 
     Returns:
@@ -67,6 +68,9 @@ def build_graph(
     def _ml(state: AgentState) -> dict:
         return run_ml_classify_node(state, pipeline=pipeline)
 
+    def _plan(state: AgentState) -> dict:
+        return run_plan_queries_node(state)
+
     def _retrieve(state: AgentState) -> dict:
         return run_retrieve_node(state, store_dir=sd, top_k=top_k)
 
@@ -76,12 +80,13 @@ def build_graph(
     def _report(state: AgentState) -> dict:
         return run_report_node(state)
 
-    def _router(state: AgentState) -> Literal["retrieve", "report"]:
+    def _router(state: AgentState) -> Literal["plan_queries", "report"]:
         return _route_after_ml(state, threshold=confidence_threshold)
 
     graph = StateGraph(AgentState)
     graph.add_node("normalize", _normalize)
     graph.add_node("ml_classify", _ml)
+    graph.add_node("plan_queries", _plan)
     graph.add_node("retrieve", _retrieve)
     graph.add_node("verify", _verify)
     graph.add_node("report", _report)
@@ -91,8 +96,9 @@ def build_graph(
     graph.add_conditional_edges(
         "ml_classify",
         _router,
-        {"retrieve": "retrieve", "report": "report"},
+        {"plan_queries": "plan_queries", "report": "report"},
     )
+    graph.add_edge("plan_queries", "retrieve")
     graph.add_edge("retrieve", "verify")
     graph.add_edge("verify", "report")
     graph.add_edge("report", END)

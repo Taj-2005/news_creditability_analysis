@@ -18,6 +18,18 @@ def _default_rag_store_dir() -> Path:
     return Path(__file__).resolve().parent.parent.parent.parent / "data" / "rag"
 
 
+def build_retrieval_query(state: AgentState) -> str:
+    """
+    Prefer LLM-planned ``queries`` (joined); else fall back to cleaned/raw text.
+    """
+    queries = state.get("queries")
+    if isinstance(queries, list) and queries:
+        parts = [str(q).strip() for q in queries[:4] if str(q).strip()]
+        if parts:
+            return " ".join(parts)
+    return (state.get("cleaned_text") or state.get("raw_text") or "").strip()
+
+
 def run_retrieve_node(
     state: AgentState,
     *,
@@ -26,10 +38,10 @@ def run_retrieve_node(
     **_kwargs: Any,
 ) -> Dict[str, Any]:
     """
-    Embed ``cleaned_text`` (fallback ``raw_text``) and run similarity search.
+    Embed the retrieval query (planned queries or cleaned text) and search FAISS.
 
     Args:
-        state: Graph state after ML; uses ``cleaned_text`` for the query string.
+        state: Graph state; uses ``queries`` from ``plan_queries`` when present.
         store_dir: Directory with ``faiss.index`` and ``chunks.json``.
         top_k: Number of hits (default 5).
         **_kwargs: Reserved.
@@ -39,7 +51,7 @@ def run_retrieve_node(
         ``rag_error`` when the index is absent or retrieval fails.
     """
     base = Path(store_dir) if store_dir is not None else _default_rag_store_dir()
-    query = (state.get("cleaned_text") or state.get("raw_text") or "").strip()
+    query = build_retrieval_query(state)
     if not query:
         return {
             "retrieved_chunks": [],

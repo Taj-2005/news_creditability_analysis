@@ -232,15 +232,17 @@ news_creditability_analysis/
     │   ├── results_loader.py            # Loads evaluation_results.json for dashboard
     │   ├── plotly_viz.py               # Plotly charts (ROC, PR curve, confusion matrix, gauge)
     │   └── visualization.py
-    ├── agent/                          # Milestone 2 — LangGraph agent (does not replace ML training code)
+    ├── agent/                          # Milestone 2 — LangGraph + Groq (does not replace ML training code)
     │   ├── state.py                    # AgentState + DEFAULT_LOW_CONFIDENCE_THRESHOLD
-    │   ├── graph.py                    # build_graph(), invoke_credibility_agent() — normalize → ML → RAG? → report
+    │   ├── graph.py                    # build_graph(), invoke_credibility_agent()
+    │   ├── llm_service.py              # Groq generate(); GROQ_API_KEY, optional GROQ_MODEL
     │   └── nodes/
-    │       ├── normalize.py            # clean_text; ml_classify.py → core.run_prediction
-    │       ├── ml_classify.py          # Calls existing TF-IDF + classifier path
+    │       ├── normalize.py            # clean_text; ml_classify → core.run_prediction
+    │       ├── ml_classify.py          # TF-IDF + classifier via core
+    │       ├── plan_queries.py         # Groq: RAG search queries (low-confidence path)
     │       ├── retrieve.py             # FAISS top-k (data/rag)
-    │       ├── verify.py               # Placeholder verifier (no LLM yet)
-    │       └── report.py               # final_report JSON for UI
+    │       ├── verify.py               # Groq: evidence vs excerpt
+    │       └── report.py               # final_report + optional Groq narrative
     ├── rag/                            # Local RAG — MiniLM + FAISS (Milestone 2)
     │   ├── embeddings.py               # sentence-transformers MiniLM, L2-normalized vectors
     │   ├── store.py                    # FAISS IndexFlatIP + chunks.json persistence
@@ -265,7 +267,7 @@ news_creditability_analysis/
 
 ## Quickstart
 
-> This repo may include a pre-trained `model/pipeline.pkl`. You can skip steps 3–4 and open the app after step 2. For **RAG** (FAISS + MiniLM) and the **LangGraph agent**, follow [Local setup (ML, RAG, agent)](#local-setup-ml-rag-agent) after installing dependencies.
+> This repo may include a pre-trained `model/pipeline.pkl`. You can skip steps 3–4 and open the app after step 2. For **RAG** (FAISS + MiniLM), the **LangGraph agent**, and **Groq** (`GROQ_API_KEY`), follow [Local setup (ML, RAG, agent)](#local-setup-ml-rag-agent) after installing dependencies.
 
 ### 1. Clone the Repository
 
@@ -333,7 +335,7 @@ Use this checklist after [Quickstart](#quickstart) steps 1–2 (`venv` + `pip in
 |------|--------|
 | **Python** | 3.10–3.12 recommended (3.14 may show LangChain/Pydantic warnings). |
 | **Disk** | ~500 MB–1 GB for `sentence-transformers` + first-time MiniLM download; `faiss-cpu` is small. |
-| **Network** | Required once to download **all-MiniLM-L6-v2** from Hugging Face when building the RAG index. |
+| **Network** | Required once to download **all-MiniLM-L6-v2** from Hugging Face when building the RAG index; Groq calls need outbound HTTPS. |
 
 ### A. Credibility ML model (`model/pipeline.pkl`)
 
@@ -364,9 +366,25 @@ This embeds a small built-in sample corpus, writes **`data/rag/faiss.index`** an
 
 **Re-run** this script whenever you change chunking logic or swap in your own corpus (edit `SAMPLE_DOCUMENTS` in `scripts/build_rag_index.py` or extend the script to load JSON/CSV).
 
-### C. LangGraph agent (normalize → ML → optional RAG → report)
+### C. Groq API (LLM reasoning)
 
-The compiled graph is built in `src/agent/graph.py`. From the **repository root**, with `model/pipeline.pkl` (and ideally `data/rag/` from step B):
+The agent uses **Groq** for query planning, verification, and the narrative summary in `src/agent/llm_service.py` (`generate(prompt) -> str`).
+
+1. Create a key at [Groq Console](https://console.groq.com/keys).
+2. Export it or use a `.env` file in the repo root (see **`.env.example`**). `python-dotenv` loads `.env` automatically when the LLM module is first used.
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GROQ_API_KEY` | Yes (for LLM output) | Secret key from Groq. |
+| `GROQ_MODEL` | No | Chat model id; default **`llama-3.1-8b-instant`**. |
+
+If `GROQ_API_KEY` is missing, **plan_queries** and **verify** fall back to heuristics / error notes, and **report** still returns structured fields with `llm_summary=None` and `llm_report_error` set.
+
+### D. LangGraph agent (normalize → ML → optional RAG + LLM → report)
+
+The compiled graph is in `src/agent/graph.py`. **Low confidence** path: `plan_queries` (Groq) → `retrieve` (FAISS) → `verify` (Groq) → `report` (Groq summary). **High confidence** path: `report` only (still attempts a Groq summary).
+
+From the **repository root**, with `model/pipeline.pkl`, optional `data/rag/`, and `GROQ_API_KEY` set:
 
 ```bash
 python -c "
@@ -375,20 +393,24 @@ out = invoke_credibility_agent(
     'WASHINGTON (Reuters) - The Federal Reserve left interest rates unchanged.',
     confidence_threshold=0.65,
 )
-print(out.get('final_report', {}).get('verdict'), out.get('final_report', {}).get('ml_confidence'))
-print('RAG path used:', out.get('final_report', {}).get('rag_path_used'))
+fr = out.get('final_report', {})
+print(fr.get('verdict'), fr.get('ml_confidence'))
+print('RAG path used:', fr.get('rag_path_used'))
+print('LLM summary present:', bool(fr.get('llm_summary')))
 "
 ```
 
-- **`confidence_threshold`**: if the model’s predicted-class probability is **below** this value, the graph runs **retrieve → verify (placeholder) → report**; otherwise it goes **straight to report**. Default constant: `DEFAULT_LOW_CONFIDENCE_THRESHOLD` in `src/agent/state.py`.
+- **`confidence_threshold`**: if the model’s predicted-class probability is **below** this value, the graph runs **plan_queries → retrieve → verify → report**; otherwise it goes **straight to report**. Default: `DEFAULT_LOW_CONFIDENCE_THRESHOLD` in `src/agent/state.py`.
 
-You can also call **`build_graph().invoke({"raw_text": "..."})`** for the same end-to-end run.
+You can also call **`build_graph().invoke({"raw_text": "..."})`**.
 
-### D. One-shot local order (copy-paste)
+### E. One-shot local order (copy-paste)
 
 From a fresh clone (after `venv` + `pip install -r requirements.txt`):
 
 ```bash
+cp .env.example .env   # then edit .env and set GROQ_API_KEY
+
 # Optional: train ML if you have dataset/ CSVs
 python scripts/run_evaluation.py
 
@@ -399,7 +421,7 @@ python scripts/build_rag_index.py
 streamlit run app.py
 ```
 
-Open **http://localhost:8501**. The Streamlit app uses the **ML pipeline** for live predictions; the **LangGraph + RAG** path is available programmatically via `invoke_credibility_agent` until a dedicated dashboard page is added.
+Open **http://localhost:8501**. The Streamlit app uses the **ML pipeline** for live predictions; the **LangGraph + RAG + Groq** path is available programmatically via `invoke_credibility_agent` until a dedicated dashboard page is added.
 
 ---
 
@@ -629,15 +651,7 @@ Your live application will be available at the URL shown in the Streamlit Cloud 
 
 ### Dependencies (`requirements.txt`)
 
-```
-streamlit
-scikit-learn
-pandas
-numpy
-nltk
-joblib
-plotly
-```
+Core stack includes **Streamlit**, **scikit-learn**, **NLTK**, **Plotly**, plus **sentence-transformers**, **faiss-cpu**, **langgraph**, **groq**, and **python-dotenv** for the RAG index and Groq-backed agent. See the file for exact pins.
 
 Install with:
 
