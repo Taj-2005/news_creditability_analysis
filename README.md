@@ -12,7 +12,7 @@
 
 **Project 11 · Milestone 1 · AI/ML Systems**
 
-[Overview](#overview) · [Architecture](#system-architecture) · [Quickstart](#quickstart) · [ML Pipeline](#ml-pipeline) · [Results](#results) · [Deployment](#deployment) · [Limitations](#limitations)
+[Overview](#overview) · [Architecture](#system-architecture) · [Quickstart](#quickstart) · [Local setup (ML, RAG, agent)](#local-setup-ml-rag-agent) · [ML Pipeline](#ml-pipeline) · [Results](#results) · [Deployment](#deployment) · [Limitations](#limitations)
 
 **Live Application:** [Demo](https://news-creditability.streamlit.app/) · **Video Walkthrough:** [Watch on YouTube](https://youtu.be/U1Nnd-8Odbs?si=5IFfdhePuDTRlmCg)
 
@@ -265,7 +265,7 @@ news_creditability_analysis/
 
 ## Quickstart
 
-> This repo includes a pre-trained model (`model/pipeline.pkl`). You can skip steps 3 and 4 and run the app directly after setting up the environment.
+> This repo may include a pre-trained `model/pipeline.pkl`. You can skip steps 3–4 and open the app after step 2. For **RAG** (FAISS + MiniLM) and the **LangGraph agent**, follow [Local setup (ML, RAG, agent)](#local-setup-ml-rag-agent) after installing dependencies.
 
 ### 1. Clone the Repository
 
@@ -320,6 +320,86 @@ streamlit run app.py
 ```
 
 The **News Credibility Analyzer** dashboard has five pages: **Overview**, **Dataset Intelligence**, **Model Comparison**, **Live Prediction Lab**, and **Architecture**. Use the **Live Prediction Lab** to paste any news article and receive a Fake/Real verdict with a confidence score.
+
+---
+
+## Local setup (ML, RAG, agent)
+
+Use this checklist after [Quickstart](#quickstart) steps 1–2 (`venv` + `pip install -r requirements.txt`). Order matters where noted.
+
+### Prerequisites
+
+| Item | Notes |
+|------|--------|
+| **Python** | 3.10–3.12 recommended (3.14 may show LangChain/Pydantic warnings). |
+| **Disk** | ~500 MB–1 GB for `sentence-transformers` + first-time MiniLM download; `faiss-cpu` is small. |
+| **Network** | Required once to download **all-MiniLM-L6-v2** from Hugging Face when building the RAG index. |
+
+### A. Credibility ML model (`model/pipeline.pkl`)
+
+The repo may already include `model/pipeline.pkl`. To regenerate metrics and the best TF-IDF classifier:
+
+1. Place Kaggle **`Fake.csv`** / **`True.csv`** under `dataset/` (see [Quickstart §3](#3-add-the-dataset)).
+2. From the **repository root**, with the venv activated:
+
+```bash
+python scripts/run_evaluation.py
+```
+
+Outputs: `model/pipeline.pkl`, `model/evaluation_results.json`.
+
+*(Alternatively run `notebook/news_credibility.ipynb` from the repo root for the full report and plots.)*
+
+### B. RAG index (MiniLM + FAISS under `data/rag/`)
+
+The RAG stack lives in `src/rag/` and uses **sentence-transformers** (`all-MiniLM-L6-v2`) plus **FAISS**. The first run downloads the embedding model into **`<repo>/.cache/huggingface/`** (see `src/rag/embeddings.py`); that folder is gitignored.
+
+From the **repository root**:
+
+```bash
+python scripts/build_rag_index.py
+```
+
+This embeds a small built-in sample corpus, writes **`data/rag/faiss.index`** and **`data/rag/chunks.json`**, and prints a short retrieval smoke test. If those files are missing, the agent’s retrieve step still completes but records a `rag_error` in the report until you run the script.
+
+**Re-run** this script whenever you change chunking logic or swap in your own corpus (edit `SAMPLE_DOCUMENTS` in `scripts/build_rag_index.py` or extend the script to load JSON/CSV).
+
+### C. LangGraph agent (normalize → ML → optional RAG → report)
+
+The compiled graph is built in `src/agent/graph.py`. From the **repository root**, with `model/pipeline.pkl` (and ideally `data/rag/` from step B):
+
+```bash
+python -c "
+from src.agent.graph import invoke_credibility_agent
+out = invoke_credibility_agent(
+    'WASHINGTON (Reuters) - The Federal Reserve left interest rates unchanged.',
+    confidence_threshold=0.65,
+)
+print(out.get('final_report', {}).get('verdict'), out.get('final_report', {}).get('ml_confidence'))
+print('RAG path used:', out.get('final_report', {}).get('rag_path_used'))
+"
+```
+
+- **`confidence_threshold`**: if the model’s predicted-class probability is **below** this value, the graph runs **retrieve → verify (placeholder) → report**; otherwise it goes **straight to report**. Default constant: `DEFAULT_LOW_CONFIDENCE_THRESHOLD` in `src/agent/state.py`.
+
+You can also call **`build_graph().invoke({"raw_text": "..."})`** for the same end-to-end run.
+
+### D. One-shot local order (copy-paste)
+
+From a fresh clone (after `venv` + `pip install -r requirements.txt`):
+
+```bash
+# Optional: train ML if you have dataset/ CSVs
+python scripts/run_evaluation.py
+
+# RAG index (downloads MiniLM on first run)
+python scripts/build_rag_index.py
+
+# Web UI
+streamlit run app.py
+```
+
+Open **http://localhost:8501**. The Streamlit app uses the **ML pipeline** for live predictions; the **LangGraph + RAG** path is available programmatically via `invoke_credibility_agent` until a dedicated dashboard page is added.
 
 ---
 
