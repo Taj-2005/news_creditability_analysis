@@ -10,7 +10,7 @@
 [![License](https://img.shields.io/badge/License-MIT-22C55E?style=flat-square)](LICENSE)
 [![Dataset](https://img.shields.io/badge/Dataset-Fake%20%26%20Real%20News%20(Kaggle)-6366F1?style=flat-square)](https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset)
 
-**Project 11 · Milestone 1 · AI/ML Systems**
+**Project 11 · AI/ML Systems** (Milestone 1 ML core + Milestone 2 agent stack in-repo)
 
 [Overview](#overview) · [Architecture](#system-architecture) · [Quickstart](#quickstart) · [Local setup (ML, RAG, agent)](#local-setup-ml-rag-agent) · [ML Pipeline](#ml-pipeline) · [Results](#results) · [Deployment](#deployment) · [Limitations](#limitations)
 
@@ -22,11 +22,13 @@
 
 ## Overview
 
-Misinformation spreads faster than manual fact-checking can scale. This project builds an end-to-end, production-structured ML pipeline that automatically classifies news articles as **Fake** or **Real** using classical NLP techniques — no LLMs, no GPU required.
+Misinformation spreads faster than manual fact-checking can scale. This repository delivers:
 
-Trained on the **[Fake and Real News Dataset](https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset)** (40,000+ articles), the system uses TF-IDF vectorization (unigrams and bigrams) with Logistic Regression, Naive Bayes, Random Forest, and SVM. The best-performing model by F1 score is persisted and served through a multi-page **Streamlit** web application called the **News Credibility Analyzer**.
+1. **Milestone 1 — Classical ML:** An end-to-end pipeline that classifies English news as **Fake** or **Real** using **TF-IDF** (unigrams + bigrams) with **Logistic Regression, Naive Bayes, Random Forest, and SVM**. The best model by test **F1** is saved as `model/pipeline.pkl` and powers fast inference. **No GPU is required** for training or serving the classifier.
 
-**This is Milestone 1** of a two-phase project. Milestone 2 will extend the system into a LangGraph-based agentic AI assistant with RAG-powered fact-checking.
+2. **Milestone 2 (in-repo) — Agent + RAG + Groq:** A **LangGraph** workflow (`src/agent/`) runs **normalize → ML → (optional) query planning → FAISS retrieval → structured verification → UI report**. **Groq** (`GROQ_API_KEY`) drives query planning, JSON verification (`supported` / `contradicted` / `unknown`), and narrative summaries. **MiniLM** embeddings + **FAISS** live under `src/rag/` and `data/rag/`. The **Streamlit** app includes a **Deep Analysis** page that invokes the full agent; **Live Prediction Lab** remains ML-only for quick scores.
+
+Trained on the **[Fake and Real News Dataset](https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset)** (40,000+ articles). See [Local setup (ML, RAG, agent)](#local-setup-ml-rag-agent) for environment variables, index build, and Groq configuration.
 
 ### Dataset at a Glance
 
@@ -55,7 +57,7 @@ Trained on the **[Fake and Real News Dataset](https://www.kaggle.com/datasets/cl
 
 ## System Architecture
 
-The system is divided into two phases: a **Training Pipeline** that builds and persists the best model, and an **Inference Pipeline** that serves real-time predictions through the web application.
+The system includes a **Training Pipeline** (offline ML), a **fast inference path** (Streamlit live lab + same code as the agent’s ML node), and an **agent inference path** (LangGraph + optional RAG + Groq) exposed as the **Deep Analysis** page and `invoke_credibility_agent()`.
 
 ### Training Pipeline
 
@@ -178,6 +180,14 @@ User Input (Article Text)
 └───────────────────────────────────┘
 ```
 
+### Deep Analysis (agent) path
+
+When users run **Deep Analysis** in the app (or call `invoke_credibility_agent()`), the flow is:
+
+`raw_text` → **normalize** (`clean_text`) → **ML** (`pipeline.pkl`) → if confidence is below the threshold → **plan_queries** (Groq) → **retrieve** (MiniLM + FAISS) → **verify** (Groq → structured JSON) → **report** (`build_ui_final_report`: summary, risk_factors, fact_checks, verdict, confidence, sources) → UI.
+
+High-confidence articles skip RAG and go straight to **report** (summary may still use Groq when configured).
+
 ### Data Flow Summary
 
 
@@ -190,7 +200,8 @@ User Input (Article Text)
 | Train     | TF-IDF matrix + labels                 | Fitted Pipeline artifact           | `src/models/pipelines.py`        |
 | Evaluate  | Pipeline + test set                    | Classification report, ROC-AUC, CM | `src/evaluation/`                |
 | Serialize | Fitted pipeline                        | `model/pipeline.pkl`               | `joblib`                         |
-| Serve     | Raw user text                          | Verdict + probability              | `src/app/` (Streamlit dashboard) |
+| Serve (ML) | Raw user text                         | Verdict + probability              | `src/app/pages/live_prediction.py`, `src/app/core.py` |
+| Serve (agent) | Raw user text                      | `final_report` + graph state       | `src/app/pages/deep_analysis.py`, `src/agent/graph.py` |
 
 > **Critical invariant:** The same `clean_text()` function and the same fitted pipeline (vectorizer + classifier) are used in both training and inference to eliminate preprocessing drift.
 
@@ -202,6 +213,7 @@ User Input (Article Text)
 news_creditability_analysis/
 ├── README.md
 ├── requirements.txt
+├── .env.example                        # Template for GROQ_API_KEY (copy to .env; do not commit secrets)
 ├── app.py                              # Streamlit entry point
 ├── .streamlit/
 │   └── config.toml                     # Theme configuration
@@ -426,7 +438,7 @@ python scripts/build_rag_index.py
 streamlit run app.py
 ```
 
-Open **http://localhost:8501**. The Streamlit app uses the **ML pipeline** for live predictions; the **LangGraph + RAG + Groq** path is available programmatically via `invoke_credibility_agent` until a dedicated dashboard page is added.
+Open **http://localhost:8501**. Use **Live Prediction Lab** for the **ML pipeline** only, or **Deep Analysis** for the full **LangGraph + RAG + Groq** flow. The same agent can be run from code with **`invoke_credibility_agent()`** / **`build_graph().invoke()`**.
 
 ---
 
@@ -587,8 +599,8 @@ The application consists of six pages:
 | **Overview**             | Key metrics (accuracy, F1, ROC-AUC, 5-fold CV F1), dataset summary, and attribution                               |
 | **Dataset Intelligence** | Class distribution, text length distributions, top TF-IDF features by class                                       |
 | **Model Comparison**     | ROC curves, Precision-Recall curves, confusion matrices, CV F1 distribution, feature importance for linear models |
-| **Live Prediction Lab**  | Text input with sample articles, Analyze button → Fake/Real verdict with confidence score                        |
-| **Deep Analysis**        | LangGraph agent: summary, risk factors, RAG sources, verdict (`GROQ_API_KEY`, `data/rag/` optional)                 |
+| **Live Prediction Lab**  | ML-only: sample text, Analyze → Fake/Real verdict + probabilities + gauge                                              |
+| **Deep Analysis**        | Full agent: summary, risk factors, RAG sources, verdict (`GROQ_API_KEY`, `data/rag/` recommended)                    |
 | **Architecture**         | Pipeline overview and repository structure map                                                                    |
 
 The app reads `model/pipeline.pkl` (best model) and `model/evaluation_results.json` (metrics). If either file is missing, the relevant pages display a clear prompt to run the training script or notebook — no stale or hardcoded data is ever shown.
@@ -652,8 +664,8 @@ Your live application will be available at the URL shown in the Streamlit Cloud 
 | ----------- | ---------------------------------------- |
 | Python      | 3.8 or higher                            |
 | GPU         | Not required                             |
-| RAM         | ~512 MB (model and vectorizer in memory) |
-| Storage     | ~100–200 MB (pipeline.pkl)              |
+| RAM         | ~512 MB baseline for ML; +~300–800 MB when loading MiniLM for RAG / first agent run |
+| Storage     | ~100–200 MB (`pipeline.pkl`); extra for `.cache/huggingface` and `data/rag/` when used |
 
 ### Dependencies (`requirements.txt`)
 
@@ -678,14 +690,15 @@ pip install -r requirements.txt
 | **Temporal Generalization** | Random train/test split; performance may be overstated if the news distribution shifts over time                          |
 | **Model Ceiling**           | Classical TF-IDF with LR/SVM; not state-of-the-art compared to fine-tuned transformer models                              |
 | **Probability Calibration** | `predict_proba` outputs are not formally calibrated (no Platt scaling or isotonic regression applied)                     |
+| **Agent / LLM**             | Groq outputs depend on model and prompt; RAG sample index is small — not a substitute for professional fact-checking        |
 
 ---
 
-## Future Work — Milestone 2 (Agentic AI)
+## Future Work
 
-Milestone 2 will extend this system into an **autonomous misinformation monitoring assistant** using LangGraph with the following capabilities:
+**Already in this repo:** LangGraph agent, FAISS + MiniLM RAG (`scripts/build_rag_index.py`), Groq integration (`src/agent/llm_service.py`), structured verification JSON, UI `final_report` builder (`src/agent/ui_report.py`), and the **Deep Analysis** Streamlit page.
 
-**Agentic fact-checking** via a LangGraph workflow with RAG retrieval (Chroma/FAISS) against fact-checking corpora. **LLM reasoning** for structured credibility assessments with source cross-referencing and hallucination reduction. **Multi-label classification** expanding from binary labels to categories: satire, misleading, out-of-context, unverified. **Calibration** using Platt scaling for well-calibrated probability outputs. **REST API** for batch inference and integration into content moderation pipelines. **Transformer baseline** using fine-tuned IndicBERT or mBERT for comparison against the TF-IDF approach.
+**Still planned / stretch goals:** **REST API** for batch inference; **multi-label** taxonomies (satire, misleading, out-of-context); **probability calibration** (e.g. Platt scaling); **larger or live fact-check corpora** (beyond the bundled sample index); **transformer baseline** (e.g. fine-tuned mBERT) compared to TF-IDF; optional **Chroma** alongside FAISS; **hardened monitoring** (rate limits, auth) for production deployments.
 
 ---
 
@@ -694,13 +707,14 @@ Milestone 2 will extend this system into an **autonomous misinformation monitori
 - [X]  Problem understanding and media use-case documented
 - [X]  Input-output specification (`text → credibility label + probability`)
 - [X]  System architecture diagram
-- [X]  Working Streamlit application (**News Credibility Analyzer**) with multi-page UI
+- [X]  Working Streamlit application (**News Credibility Analyzer**) with multi-page UI (including **Deep Analysis** agent page)
 - [X]  Model performance evaluation report (Precision · Recall · F1 · ROC-AUC · CV F1)
 - [X]  Multiple models trained and compared (Logistic Regression · Naive Bayes · Random Forest · SVM)
 - [X]  Confusion matrices, ROC curves, and Precision-Recall curves
 - [X]  TF-IDF feature interpretability (top fake/real indicative terms)
 - [X]  Dataset attribution (Kaggle Fake and Real News) in app and README
-- [X]  Publicly hosted application URL — [https://](https://)
+- [X]  Publicly hosted application URL — [Streamlit Cloud demo](https://news-creditability.streamlit.app/)
+- [X]  LangGraph agent path with RAG (FAISS), Groq LLM hooks, structured verification, and **Deep Analysis** UI page
 
 ---
 
@@ -708,6 +722,6 @@ Milestone 2 will extend this system into an **autonomous misinformation monitori
 
 **Project 11 · Intelligent News Credibility Analysis and Agentic Misinformation Monitoring**
 
-Milestone 1 — ML-Based Classification · Built with scikit-learn · Deployed on Streamlit
+Classical ML (scikit-learn) · Optional RAG (FAISS + MiniLM) · Optional LLM (Groq) · Streamlit
 
 </div>
