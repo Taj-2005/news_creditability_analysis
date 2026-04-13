@@ -178,12 +178,13 @@ def build_ui_final_report(
     verification = state.get("verification") or {}
     fact_checks = _fact_checks(verification)
     risk_factors = _risk_factors(state, verification)
-    rag_used = "retrieved_chunks" in state
+    chunks_list = state.get("retrieved_chunks") or []
+    rag_had_passages = bool(chunks_list)
 
     preview = (state.get("cleaned_text") or state.get("raw_text") or "")[:1500]
 
     summary = _deterministic_summary(
-        verdict, confidence, verification, rag_used, preview
+        verdict, confidence, verification, rag_had_passages, preview
     )
 
     if use_llm_summary:
@@ -192,7 +193,7 @@ def build_ui_final_report(
             "confidence": confidence,
             "risk_factors": risk_factors[:8],
             "fact_checks_preview": fact_checks[:8],
-            "rag_path_used": rag_used,
+            "rag_path_used": rag_had_passages,
             "verification_mode": verification.get("mode"),
         }
         prompt = (
@@ -212,7 +213,7 @@ def build_ui_final_report(
             pass
 
     sources: List[Dict[str, Any]] = []
-    for i, c in enumerate(state.get("retrieved_chunks") or []):
+    for i, c in enumerate(chunks_list):
         if i >= 8:
             break
         txt = str(c.get("text") or "").strip()

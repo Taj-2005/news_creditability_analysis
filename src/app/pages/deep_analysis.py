@@ -14,6 +14,10 @@ from src.agent.graph import invoke_credibility_agent
 
 logger = logging.getLogger("news_credibility_app")
 
+# Any value > 1.0 forces the low-confidence branch so plan → retrieve → verify
+# always run (ML probabilities are in [0, 1]). Generic invoke defaults to 0.65.
+_DEEP_ANALYSIS_ALWAYS_RAG_THRESHOLD = 1.5
+
 
 def _inject_styles():
     st.markdown(
@@ -75,9 +79,10 @@ def render():
 
     page_header(
         "Deep analysis",
-        "Full agent pipeline: normalize → ML → optional RAG → verification → report. "
-        "Uses Groq when `GROQ_API_KEY` is set (environment or Streamlit Secrets); "
-        "otherwise summaries fall back gracefully.",
+        "Runs the full pipeline on this page: normalize → ML → query planning → "
+        "retrieval → verification → report (not the “high-confidence shortcut”). "
+        "Groq improves query planning and verification when `GROQ_API_KEY` is set; "
+        "build `data/rag/` for non-empty sources.",
     )
 
     st.markdown('<div class="da-wrap">', unsafe_allow_html=True)
@@ -114,7 +119,10 @@ def render():
         else:
             try:
                 with st.spinner("Running agent…"):
-                    out = invoke_credibility_agent(text.strip())
+                    out = invoke_credibility_agent(
+                        text.strip(),
+                        confidence_threshold=_DEEP_ANALYSIS_ALWAYS_RAG_THRESHOLD,
+                    )
                 st.session_state["deep_agent_out"] = out
             except Exception as e:
                 logger.exception("Deep analysis failed: %s", e)
@@ -163,13 +171,23 @@ def render():
             )
     else:
         st.markdown(
-            '<div class="da-body" style="color:#94a3b8;">No retrieved passages '
-            "(high ML confidence path or index missing).</div>",
+            '<div class="da-body" style="color:#94a3b8;">No retrieved passages — '
+            "usually the FAISS index is missing or retrieval failed. "
+            "Build it with: <code>python scripts/build_rag_index.py</code></div>",
             unsafe_allow_html=True,
         )
+        rag_err = (out or {}).get("rag_error")
+        if rag_err:
+            st.caption(str(rag_err))
 
     with st.expander("Fact checks (structured)", expanded=False):
-        for row in fr.get("fact_checks") or []:
+        rows = fr.get("fact_checks") or []
+        if not rows:
+            st.caption(
+                "No rows yet. After retrieval runs, this lists supported / contradicted / "
+                "unknown items (Groq verification when an API key is set)."
+            )
+        for row in rows:
             st.caption(f"{row.get('status', '').upper()} · {row.get('finding', '')}")
 
     st.markdown("</div>", unsafe_allow_html=True)
