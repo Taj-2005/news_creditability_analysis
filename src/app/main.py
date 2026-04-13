@@ -20,6 +20,7 @@ if str(repo_root) not in sys.path:
 
 import streamlit as st
 
+from src.config.env_bootstrap import bootstrap_runtime_env
 from src.features.preprocessing import clean_text
 from src.evaluation.results_loader import get_dataset_stats
 
@@ -296,6 +297,7 @@ def render_footer() -> None:
 
 
 def main() -> None:
+    bootstrap_runtime_env()
     st.set_page_config(
         page_title=PAGE_TITLE,
         page_icon="📰",

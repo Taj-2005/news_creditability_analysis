@@ -651,7 +651,8 @@ git push origin main
 1. Go to [share.streamlit.io](https://share.streamlit.io) and sign in with GitHub.
 2. Click **New App** and select your repository.
 3. Set **Branch:** `main` and **Main file:** `app.py`.
-4. Click **Deploy**.
+4. Under **Advanced settings** → **Secrets**, add your Groq key as TOML (same names as in `.env.example`). The app copies these into the process environment on startup so **Deep Analysis** and the agent can call Groq without a local `.env` file. See `.streamlit/secrets.example.toml` for flat or `[groq]` nested examples.
+5. Click **Deploy**.
 
 **Step 3 — Verify**
 
@@ -669,7 +670,7 @@ Your live application will be available at the URL shown in the Streamlit Cloud 
 
 ### Dependencies (`requirements.txt`)
 
-Core stack includes **Streamlit**, **scikit-learn**, **NLTK**, **Plotly**, plus **sentence-transformers**, **faiss-cpu**, **langgraph**, **groq**, and **python-dotenv** for the RAG index and Groq-backed agent. See the file for exact pins.
+Core stack includes **Streamlit**, **scikit-learn**, **NLTK**, **Plotly**, plus **sentence-transformers**, **faiss-cpu**, **langgraph**, **groq**, and **python-dotenv** for the RAG index and Groq-backed agent. `requirements.txt` uses lower bounds compatible with **Streamlit Community Cloud**; upgrade within those ranges as needed.
 
 Install with:
 

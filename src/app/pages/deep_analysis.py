@@ -76,7 +76,8 @@ def render():
     page_header(
         "Deep analysis",
         "Full agent pipeline: normalize → ML → optional RAG → verification → report. "
-        "Uses Groq when `GROQ_API_KEY` is set; otherwise summaries fall back gracefully.",
+        "Uses Groq when `GROQ_API_KEY` is set (environment or Streamlit Secrets); "
+        "otherwise summaries fall back gracefully.",
     )
 
     st.markdown('<div class="da-wrap">', unsafe_allow_html=True)

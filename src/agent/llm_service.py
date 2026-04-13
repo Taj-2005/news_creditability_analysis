@@ -22,8 +22,10 @@ def _maybe_load_dotenv() -> None:
         return
     try:
         from dotenv import load_dotenv
+        from pathlib import Path
 
-        load_dotenv()
+        root = Path(__file__).resolve().parent.parent.parent
+        load_dotenv(root / ".env", override=False)
     except ImportError:
         pass
     _DOTENV_LOADED = True

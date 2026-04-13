@@ -12,6 +12,7 @@ if str(repo_root) not in sys.path:
 
 import streamlit as st
 
+from src.config.env_bootstrap import bootstrap_runtime_env
 from src.app.components.styles import inject_app_css
 from src.app.core import get_model_algorithm_display, PAGE_TITLE
 from src.app.pages import (
@@ -166,6 +167,7 @@ def _inject_sidebar_styles():
 
 
 def run():
+    bootstrap_runtime_env()
     st.set_page_config(
         layout="wide",
         page_title=PAGE_TITLE,
