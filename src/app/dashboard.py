@@ -17,6 +17,7 @@ from src.app.core import get_model_algorithm_display, PAGE_TITLE
 from src.app.pages import (
     architecture,
     dataset_insights,
+    deep_analysis,
     home,
     live_prediction,
     model_compare,
@@ -27,6 +28,7 @@ PAGES = {
     "Dataset Intelligence":  ("Class distribution & stats",      dataset_insights.render),
     "Model Comparison":      ("LR vs DT metrics & charts",       model_compare.render),
     "Live Prediction Lab":   ("Try the model",                   live_prediction.render),
+    "Deep Analysis":         ("Agent + RAG + Groq",              deep_analysis.render),
     "Architecture":          ("Pipeline & repo mapping",         architecture.render),
 }
 
@@ -38,6 +40,7 @@ PAGE_ICONS = {
     "Dataset Intelligence": "○",
     "Model Comparison":     "○",
     "Live Prediction Lab":  "○",
+    "Deep Analysis":        "○",
     "Architecture":         "○",
 }
 

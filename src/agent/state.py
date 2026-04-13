@@ -28,7 +28,7 @@ class AgentState(TypedDict, total=False):
         verification: Verifier output; always includes ``supported``, ``contradicted``,
             ``unknown`` (each a ``list[str]``), plus ``mode``, ``llm``, ``chunks_reviewed``.
         final_report: UI payload with ``summary``, ``risk_factors``, ``fact_checks``,
-            ``verdict``, ``confidence`` (see ``src.agent.ui_report``).
+            ``verdict``, ``confidence``, ``sources`` (see ``src.agent.ui_report``).
         error: Normalize / ML failure message; graph still reaches ``report``.
     """
 

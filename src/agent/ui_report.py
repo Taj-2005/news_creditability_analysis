@@ -156,7 +156,8 @@ def build_ui_final_report(
         use_llm_summary: If True, try Groq for ``summary``; else deterministic only.
 
     Returns:
-        Dict with keys ``summary``, ``risk_factors``, ``fact_checks``, ``verdict``, ``confidence``.
+        Dict with keys ``summary``, ``risk_factors``, ``fact_checks``, ``verdict``,
+        ``confidence``, and ``sources`` (RAG snippets for UI citations).
     """
     ml_label = state.get("ml_label")
     verdict = _ml_verdict_label(ml_label)
@@ -195,7 +196,7 @@ def build_ui_final_report(
             "verification_mode": verification.get("mode"),
         }
         prompt = (
-            "Write a short **Summary** for a news credibility dashboard (plain text only, "
+            "Write a short Summary for a news credibility dashboard (plain text only, "
             "no markdown headings, 2–4 short paragraphs). Base it strictly on the JSON facts; "
             "do not invent URLs or sources. If evidence was weak, say so clearly.\n\n"
             f"FACTS_JSON:\n{json.dumps(payload, indent=2, ensure_ascii=False)}\n\n"
@@ -210,10 +211,26 @@ def build_ui_final_report(
         except Exception:
             pass
 
+    sources: List[Dict[str, Any]] = []
+    for i, c in enumerate(state.get("retrieved_chunks") or []):
+        if i >= 8:
+            break
+        txt = str(c.get("text") or "").strip()
+        if not txt:
+            continue
+        sources.append(
+            {
+                "excerpt": txt[:500] + ("…" if len(txt) > 500 else ""),
+                "score": float(c.get("score") or 0.0),
+                "metadata": c.get("metadata") or {},
+            }
+        )
+
     return {
         "summary": summary,
         "risk_factors": risk_factors,
         "fact_checks": fact_checks,
         "verdict": verdict,
         "confidence": confidence,
+        "sources": sources,
     }

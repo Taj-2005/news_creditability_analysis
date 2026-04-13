@@ -311,7 +311,8 @@ def render():
 
     page_header(
         "Live prediction lab",
-        "Paste a headline or article excerpt — get a verdict and confidence score instantly.",
+        "Paste a headline or article excerpt — get a verdict and confidence score instantly. "
+        "For the full agent (ML + RAG + Groq report), open Deep Analysis in the sidebar.",
     )
 
     # ── Section 1: Input ──

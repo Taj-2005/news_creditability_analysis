@@ -261,6 +261,7 @@ news_creditability_analysis/
             ├── dataset_insights.py     # Class distribution, text length, TF-IDF features
             ├── model_compare.py        # ROC, PR curve, confusion matrix, feature importance
             ├── live_prediction.py      # Text input → Fake/Real verdict with confidence
+            ├── deep_analysis.py        # Agent pipeline UI (summary, risks, sources, verdict)
             └── architecture.py        # Pipeline and repo mapping
 ```
 
@@ -322,7 +323,7 @@ streamlit run app.py
 # Opens at http://localhost:8501
 ```
 
-The **News Credibility Analyzer** dashboard has five pages: **Overview**, **Dataset Intelligence**, **Model Comparison**, **Live Prediction Lab**, and **Architecture**. Use the **Live Prediction Lab** to paste any news article and receive a Fake/Real verdict with a confidence score.
+The **News Credibility Analyzer** dashboard has six pages: **Overview**, **Dataset Intelligence**, **Model Comparison**, **Live Prediction Lab**, **Deep Analysis** (LangGraph agent), and **Architecture**. Use **Live Prediction Lab** for fast ML-only scoring, or **Deep Analysis** for summary, risk factors, and RAG sources.
 
 ---
 
@@ -387,7 +388,7 @@ The compiled graph is in `src/agent/graph.py`. **Low confidence** path: `plan_qu
 
 **Verification output** (`state["verification"]` after the verify node): always includes three string lists — **`supported`**, **`contradicted`**, **`unknown`** — plus **`mode`** (`structured` | `no_evidence` | `fallback`), **`llm`**, **`chunks_reviewed`**, and **`top_scores`**. The LLM is instructed to return JSON only; the node parses, normalizes (caps length/count, dedupes), and fills safe fallbacks if parsing or the API fails.
 
-**Final report** (`out["final_report"]` — UI-oriented, built in `src/agent/ui_report.py`): exactly **`summary`** (string), **`risk_factors`** (string list), **`fact_checks`** (list of `{ "status", "finding" }` rows), **`verdict`** (`Fake` | `Real` | `Unknown`), **`confidence`** (one human-readable line). You can also call **`build_ui_final_report(state_dict)`** outside the graph.
+**Final report** (`out["final_report"]` — UI-oriented, built in `src/agent/ui_report.py`): **`summary`**, **`risk_factors`**, **`fact_checks`** (`{ "status", "finding" }` rows), **`verdict`**, **`confidence`**, and **`sources`** (RAG excerpts + scores for the Deep Analysis page). You can also call **`build_ui_final_report(state_dict)`** outside the graph.
 
 From the **repository root**, with `model/pipeline.pkl`, optional `data/rag/`, and `GROQ_API_KEY` set:
 
@@ -578,7 +579,7 @@ streamlit run app.py
 # Opens at http://localhost:8501
 ```
 
-The application consists of five pages:
+The application consists of six pages:
 
 
 | Page                     | Description                                                                                                       |
@@ -587,6 +588,7 @@ The application consists of five pages:
 | **Dataset Intelligence** | Class distribution, text length distributions, top TF-IDF features by class                                       |
 | **Model Comparison**     | ROC curves, Precision-Recall curves, confusion matrices, CV F1 distribution, feature importance for linear models |
 | **Live Prediction Lab**  | Text input with sample articles, Analyze button → Fake/Real verdict with confidence score                        |
+| **Deep Analysis**        | LangGraph agent: summary, risk factors, RAG sources, verdict (`GROQ_API_KEY`, `data/rag/` optional)                 |
 | **Architecture**         | Pipeline overview and repository structure map                                                                    |
 
 The app reads `model/pipeline.pkl` (best model) and `model/evaluation_results.json` (metrics). If either file is missing, the relevant pages display a clear prompt to run the training script or notebook — no stale or hardcoded data is ever shown.
