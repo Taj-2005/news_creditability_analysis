@@ -17,25 +17,58 @@ from pathlib import Path
 from typing import Optional
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-_DOTENV_DONE = False
 
 
 def _repo_root() -> Path:
     return _REPO_ROOT
 
 
-def _load_dotenv_from_repo() -> None:
-    global _DOTENV_DONE
-    if _DOTENV_DONE:
+def merge_dotenv_over_empty_env_keys(env_path: Optional[Path] = None) -> None:
+    """
+    Copy values from a ``.env`` file into ``os.environ`` only for keys that are
+    missing or whitespace-only.
+
+    ``load_dotenv(..., override=False)`` skips any key already present in the
+    environment, including ``GROQ_API_KEY=""`` from the shell or tooling. This
+    fills those blanks from the file so a valid ``.env`` still applies.
+    """
+    try:
+        from dotenv import dotenv_values
+    except ImportError:
         return
+    path = env_path if env_path is not None else (_repo_root() / ".env")
+    if not path.is_file():
+        return
+    data = dotenv_values(path)
+    for key in (
+        "GROQ_API_KEY",
+        "GROQ_MODEL",
+        "HF_HOME",
+        "HUGGINGFACE_HUB_TOKEN",
+        "HF_TOKEN",
+    ):
+        if key not in data:
+            continue
+        raw = data[key]
+        if raw is None:
+            continue
+        val = str(raw).strip()
+        if not val:
+            continue
+        if (os.environ.get(key) or "").strip():
+            continue
+        os.environ[key] = val
+
+
+def _load_dotenv_from_repo() -> None:
     try:
         from dotenv import load_dotenv
     except ImportError:
-        _DOTENV_DONE = True
         return
     env_path = _repo_root() / ".env"
-    load_dotenv(env_path, override=False)
-    _DOTENV_DONE = True
+    if env_path.is_file():
+        load_dotenv(env_path, override=False)
+    merge_dotenv_over_empty_env_keys(env_path)
 
 
 def _env_nonempty(key: str) -> bool:

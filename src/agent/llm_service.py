@@ -6,7 +6,8 @@ Configuration via environment variables:
 - ``GROQ_API_KEY`` (required for live calls): API key from https://console.groq.com/
 - ``GROQ_MODEL`` (optional): chat model id, default ``llama-3.1-8b-instant``
 
-If ``python-dotenv`` is installed, ``.env`` in the working directory is loaded on first use.
+If ``python-dotenv`` is installed, ``.env`` at the repository root is loaded on first use,
+including filling keys that exist in the environment but are blank-only.
 """
 
 from __future__ import annotations
@@ -24,8 +25,13 @@ def _maybe_load_dotenv() -> None:
         from dotenv import load_dotenv
         from pathlib import Path
 
+        from src.config.env_bootstrap import merge_dotenv_over_empty_env_keys
+
         root = Path(__file__).resolve().parent.parent.parent
-        load_dotenv(root / ".env", override=False)
+        env_file = root / ".env"
+        if env_file.is_file():
+            load_dotenv(env_file, override=False)
+        merge_dotenv_over_empty_env_keys(env_file)
     except ImportError:
         pass
     _DOTENV_LOADED = True
@@ -62,8 +68,10 @@ def generate(
     api_key = (os.environ.get("GROQ_API_KEY") or "").strip()
     if not api_key:
         raise RuntimeError(
-            "GROQ_API_KEY is not set. Add it to your environment or a .env file "
-            "(see README) and restart the process."
+            "GROQ_API_KEY is not set or is empty in the process environment. "
+            "Use a non-empty key in `.env` at the repository root (if the variable "
+            "exists but is blank in your shell, remove it or unset it so `.env` can apply), "
+            "or set Streamlit Cloud → App settings → Secrets. Then rerun the app."
         )
 
     model = (os.environ.get("GROQ_MODEL") or DEFAULT_GROQ_MODEL).strip()
