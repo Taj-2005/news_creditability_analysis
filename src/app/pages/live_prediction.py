@@ -1,8 +1,15 @@
 """Live Prediction Lab — large input, Predict button, result card with gauge and probability. Production UX."""
 
 import logging
+import textwrap
+
 import streamlit as st
 
+from src.app.components.agent_pipeline import (
+    STEP_DONE_CHECK_SVG,
+    live_prediction_flow_html,
+    pipeline_styles_css,
+)
 from src.app.components.ui import page_header
 from src.app.core import (
     EXAMPLE_TEXTS,
@@ -22,7 +29,7 @@ def _inject_styles():
     st.markdown(
         """
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;1,9..144,300&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;1,9..144,300&display=swap');
 
         .stApp { background: #ffffff; }
 
@@ -163,6 +170,17 @@ def _inject_styles():
             font-size: 22px;
             flex-shrink: 0;
         }
+        .verdict-icon.verdict-icon-svg {
+            font-size: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .verdict-icon.verdict-icon-svg .da-step-check-svg {
+            width: 22px;
+            height: 22px;
+            color: #15803d;
+        }
         .verdict-text-label {
             font-family: 'DM Mono', monospace;
             font-size: 10px;
@@ -293,9 +311,39 @@ def _inject_styles():
             line-height: 1.6;
         }
 
+        .lp-flow-caption {
+            font-family: 'DM Sans', ui-sans-serif, sans-serif;
+            font-size: 0.78rem;
+            color: #64748b;
+            margin: 0 0 0.5rem 0.05rem;
+            line-height: 1.45;
+        }
+
+        .verdict-fake, .verdict-real {
+            animation: lp-verdict-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        .prob-card {
+            animation: lp-verdict-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        .prob-card:nth-child(1) { animation-delay: 0.05s; }
+        .prob-card:nth-child(2) { animation-delay: 0.1s; }
+        @keyframes lp-verdict-in {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        """
+        + pipeline_styles_css()
+        + textwrap.dedent(
+            """
+        @media (prefers-reduced-motion: reduce) {
+            .verdict-fake, .verdict-real, .prob-card { animation: none !important; }
+        }
+
         h1, h2, h3 { font-family: 'Fraunces', serif !important; font-weight: 300 !important; }
         </style>
-        """,
+        """
+        ).strip()
+        + "\n",
         unsafe_allow_html=True,
     )
 
@@ -308,6 +356,7 @@ def render():
         st.session_state["live_input"] = st.session_state.pop("live_pending_example")
         if "live_result" in st.session_state:
             del st.session_state["live_result"]
+        st.session_state.pop("live_pipeline_timeline", None)
 
     page_header(
         "Live prediction lab",
@@ -382,32 +431,167 @@ def render():
     with col_btn2:
         if st.button("Clear", use_container_width=True):
             st.session_state["live_pending_example"] = ""
+            st.session_state.pop("live_pipeline_timeline", None)
             st.rerun()
 
-    # ── Run prediction ──
+    # ── Run prediction (stepped UI: validate → load → predict) ──
     if predict_clicked:
+        flow_caption = (
+            "Each step maps to code in this repo — same stepped pipeline view as Deep Analysis, "
+            "without the LangGraph agent."
+        )
         is_valid, err = validate_input(input_text)
+        live = st.empty()
+
+        def _flow_paint(head: str, steps: list[tuple[str, dict]], *, pulse: bool) -> None:
+            live.markdown(
+                f'<p class="da-flow-head">{_escape_lp(head)}</p>'
+                + live_prediction_flow_html(steps, pulse_last=pulse),
+                unsafe_allow_html=True,
+            )
+
         if not is_valid:
-            st.markdown(f'<div class="warn-box">⚠ {err}</div>', unsafe_allow_html=True)
+            st.session_state.pop("live_result", None)
+            ev_fail = [("validate", {"ok": False, "err": err, "warn": True})]
+            _flow_paint("Validation failed", ev_fail, pulse=False)
+            st.session_state["live_pipeline_timeline"] = ev_fail
+            st.markdown(f'<div class="warn-box">⚠ {_escape_lp(err)}</div>', unsafe_allow_html=True)
         else:
-            try:
-                with st.spinner("Analyzing…"):
-                    pipeline = load_model()
-                    prediction, fake_prob, real_prob = run_prediction(pipeline, input_text)
+            events_t: list[tuple[str, dict]] = [
+                ("validate", {"ok": True, "chars": len((input_text or "").strip())}),
+            ]
+
+            def _run_inference_block() -> None:
+                _flow_paint("Running · inference", events_t, pulse=True)
+                pipeline = load_model()
+                events_t.append(
+                    (
+                        "load_model",
+                        {"ok": True, "path_hint": f"{MODEL_DIR_NAME}/{MODEL_FILENAME}"},
+                    )
+                )
+                _flow_paint("Running · inference", events_t, pulse=True)
+                prediction, fake_prob, real_prob = run_prediction(pipeline, input_text)
+                events_t.append(
+                    (
+                        "predict",
+                        {
+                            "ok": True,
+                            "prediction": prediction,
+                            "fake_prob": fake_prob,
+                            "real_prob": real_prob,
+                        },
+                    )
+                )
+                _flow_paint("Pipeline complete", events_t, pulse=False)
+                st.session_state["live_pipeline_timeline"] = list(events_t)
                 st.session_state["live_result"] = (prediction, fake_prob, real_prob)
-            except FileNotFoundError:
-                logger.error("Model not found")
+
+            if hasattr(st, "status"):
+                with st.status("Running prediction…", expanded=True) as run_status:
+                    st.markdown(
+                        f'<p class="lp-flow-caption">{_escape_lp(flow_caption)}</p>',
+                        unsafe_allow_html=True,
+                    )
+                    try:
+                        _run_inference_block()
+                    except FileNotFoundError as fnf:
+                        logger.error("Model not found: %s", fnf)
+                        events_t.append(
+                            ("load_model", {"ok": False, "err": str(fnf), "warn": True}),
+                        )
+                        _flow_paint("Pipeline stopped", events_t, pulse=False)
+                        st.session_state["live_pipeline_timeline"] = list(events_t)
+                        st.session_state.pop("live_result", None)
+                        st.markdown(
+                            f'<div class="error-box">✕ Model not available. Add '
+                            f"<code>{MODEL_DIR_NAME}/{MODEL_FILENAME}</code> or run training (see README).</div>",
+                            unsafe_allow_html=True,
+                        )
+                        run_status.update(
+                            label="Stopped — model missing",
+                            state="error",
+                            expanded=False,
+                        )
+                    except Exception as ex:
+                        logger.exception("Prediction failed: %s", ex)
+                        if len(events_t) == 1:
+                            events_t.append(
+                                (
+                                    "load_model",
+                                    {
+                                        "ok": False,
+                                        "err": str(ex)[:160],
+                                        "warn": True,
+                                    },
+                                )
+                            )
+                        else:
+                            events_t.append(
+                                (
+                                    "predict",
+                                    {
+                                        "ok": False,
+                                        "err": str(ex)[:160],
+                                        "warn": True,
+                                    },
+                                )
+                            )
+                        _flow_paint("Pipeline stopped", events_t, pulse=False)
+                        st.session_state["live_pipeline_timeline"] = list(events_t)
+                        st.session_state.pop("live_result", None)
+                        st.markdown(
+                            '<div class="error-box">✕ Prediction failed. Try again or different input.</div>',
+                            unsafe_allow_html=True,
+                        )
+                        run_status.update(
+                            label="Prediction failed",
+                            state="error",
+                            expanded=False,
+                        )
+                    else:
+                        run_status.update(
+                            label="Prediction finished",
+                            state="complete",
+                            expanded=False,
+                        )
+            else:
                 st.markdown(
-                    f'<div class="error-box">✕ Model not available. Add '
-                    f'<code>{MODEL_DIR_NAME}/{MODEL_FILENAME}</code> or run training (see README).</div>',
+                    f'<p class="lp-flow-caption">{_escape_lp(flow_caption)}</p>',
                     unsafe_allow_html=True,
                 )
-            except Exception as e:
-                logger.exception("Prediction failed: %s", e)
-                st.markdown(
-                    '<div class="error-box">✕ Prediction failed. Please try again or use different input.</div>',
-                    unsafe_allow_html=True,
-                )
+                try:
+                    _run_inference_block()
+                except FileNotFoundError as fnf:
+                    logger.error("Model not found: %s", fnf)
+                    events_t.append(
+                        ("load_model", {"ok": False, "err": str(fnf), "warn": True}),
+                    )
+                    _flow_paint("Pipeline stopped", events_t, pulse=False)
+                    st.session_state["live_pipeline_timeline"] = list(events_t)
+                    st.session_state.pop("live_result", None)
+                    st.markdown(
+                        f'<div class="error-box">✕ Model not available. Add '
+                        f"<code>{MODEL_DIR_NAME}/{MODEL_FILENAME}</code> or run training (see README).</div>",
+                        unsafe_allow_html=True,
+                    )
+                except Exception as ex:
+                    logger.exception("Prediction failed: %s", ex)
+                    if len(events_t) == 1:
+                        events_t.append(
+                            ("load_model", {"ok": False, "err": str(ex)[:160], "warn": True}),
+                        )
+                    else:
+                        events_t.append(
+                            ("predict", {"ok": False, "err": str(ex)[:160], "warn": True}),
+                        )
+                    _flow_paint("Pipeline stopped", events_t, pulse=False)
+                    st.session_state["live_pipeline_timeline"] = list(events_t)
+                    st.session_state.pop("live_result", None)
+                    st.markdown(
+                        '<div class="error-box">✕ Prediction failed. Try again or different input.</div>',
+                        unsafe_allow_html=True,
+                    )
 
     # ── Result card ──
     if "live_result" in st.session_state:
@@ -418,6 +602,15 @@ def render():
         st.markdown('<hr class="lp-rule">', unsafe_allow_html=True)
         st.markdown('<p class="lp-eyebrow">02 / Result</p>', unsafe_allow_html=True)
         st.markdown('<h2 class="lp-heading">Verdict</h2>', unsafe_allow_html=True)
+
+        trace = st.session_state.get("live_pipeline_timeline")
+        if trace:
+            with st.expander("Inference trace (steps)", expanded=False):
+                st.markdown(
+                    '<p class="da-flow-head">Last run · validate → load → predict</p>'
+                    + live_prediction_flow_html(trace, pulse_last=False),
+                    unsafe_allow_html=True,
+                )
 
         # Verdict banner
         if is_fake:
@@ -433,7 +626,7 @@ def render():
         else:
             st.markdown(
                 '<div class="verdict-real">'
-                '<span class="verdict-icon">✓</span>'
+                f'<span class="verdict-icon verdict-icon-svg">{STEP_DONE_CHECK_SVG}</span>'
                 '<div>'
                 '<div class="verdict-text-label">Classification</div>'
                 '<div class="verdict-text-main">Likely Credible · Real News</div>'
@@ -453,28 +646,27 @@ def render():
             risk_label = "Credibility risk · higher = more likely fake" if is_fake else "Credibility score · higher = more likely real"
             bar_class = "risk-fill-fake" if is_fake else "risk-fill-real"
 
-            st.markdown(
+            prob_html = textwrap.dedent(
                 f"""
                 <div class="prob-grid">
                 <div class="prob-card">
-                    <div class="prob-card-label">Fake probability</div>
-                    <div class="prob-card-value">{fake_prob:.1%}</div>
+                <div class="prob-card-label">Fake probability</div>
+                <div class="prob-card-value">{fake_prob:.1%}</div>
                 </div>
                 <div class="prob-card">
-                    <div class="prob-card-label">Real probability</div>
-                    <div class="prob-card-value">{real_prob:.1%}</div>
+                <div class="prob-card-label">Real probability</div>
+                <div class="prob-card-value">{real_prob:.1%}</div>
                 </div>
                 </div>
                 <div class="risk-section">
-                <div class="risk-label">{risk_label}</div>
+                <div class="risk-label">{_escape_lp(risk_label)}</div>
                 <div class="risk-track">
-                    <div class="{bar_class}"
-                        style="width:{bar_width*100:.1f}%"></div>
+                <div class="{bar_class}" style="width:{bar_width*100:.1f}%"></div>
                 </div>
                 </div>
-                """,
-                unsafe_allow_html=True,
-            )
+                """
+            ).strip()
+            st.markdown(prob_html, unsafe_allow_html=True)
 
         # Explanation expander
         st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
@@ -493,3 +685,13 @@ def render():
                 """,
                 unsafe_allow_html=True,
             )
+
+
+def _escape_lp(s: str) -> str:
+    return (
+        (s or "")
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )

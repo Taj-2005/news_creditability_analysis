@@ -5,12 +5,18 @@ Deep Analysis — LangGraph agent (ML + RAG + Groq) with a minimal results layou
 from __future__ import annotations
 
 import logging
+import textwrap
 
 import streamlit as st
 
+from src.app.components.agent_pipeline import (
+    deep_analysis_results_css,
+    pipeline_styles_css,
+    timeline_events_html,
+)
 from src.app.components.ui import page_header
 from src.app.core import EXAMPLE_TEXTS, validate_input
-from src.agent.graph import invoke_credibility_agent
+from src.agent.graph import iter_credibility_agent
 
 logger = logging.getLogger("news_credibility_app")
 
@@ -20,52 +26,17 @@ _DEEP_ANALYSIS_ALWAYS_RAG_THRESHOLD = 1.5
 
 
 def _inject_styles():
-    st.markdown(
+    font_block = textwrap.dedent(
         """
-        <style>
-        .da-wrap { max-width: 720px; margin: 0 auto; }
-        .da-verdict {
-            font-family: 'Fraunces', Georgia, serif;
-            font-size: 1.75rem;
-            font-weight: 400;
-            color: #0f172a;
-            margin: 0 0 0.35rem 0;
-            letter-spacing: -0.02em;
-        }
-        .da-sub {
-            font-family: system-ui, sans-serif;
-            font-size: 0.8125rem;
-            color: #64748b;
-            margin-bottom: 1.75rem;
-        }
-        .da-section {
-            font-family: system-ui, sans-serif;
-            font-size: 0.6875rem;
-            font-weight: 600;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            color: #94a3b8;
-            margin: 1.5rem 0 0.5rem 0;
-        }
-        .da-body {
-            font-family: system-ui, sans-serif;
-            font-size: 0.9375rem;
-            line-height: 1.65;
-            color: #334155;
-        }
-        .da-li { margin: 0.35rem 0; padding-left: 0.1rem; }
-        .da-source {
-            font-size: 0.8125rem;
-            color: #475569;
-            border-left: 2px solid #e2e8f0;
-            padding: 0.5rem 0 0.5rem 0.75rem;
-            margin: 0.5rem 0;
-            background: #fafafa;
-            border-radius: 0 6px 6px 0;
-        }
-        .da-meta { font-size: 0.7rem; color: #94a3b8; margin-top: 0.25rem; }
-        </style>
-        """,
+        @import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600&family=Newsreader:ital,opsz,wght@6..72,500;6..72,600&display=swap");
+        """
+    ).strip()
+    st.markdown(
+        "<style>"
+        + font_block
+        + deep_analysis_results_css()
+        + pipeline_styles_css()
+        + "</style>",
         unsafe_allow_html=True,
     )
 
@@ -76,6 +47,7 @@ def render():
     if "deep_pending_example" in st.session_state:
         st.session_state["deep_input"] = st.session_state.pop("deep_pending_example")
         st.session_state.pop("deep_agent_out", None)
+        st.session_state.pop("deep_agent_timeline", None)
 
     page_header(
         "Deep analysis",
@@ -86,10 +58,14 @@ def render():
     )
 
     st.markdown('<div class="da-wrap">', unsafe_allow_html=True)
+    st.markdown(
+        '<p class="da-input-hint">Paste or load a sample, then run. The live pipeline shows each LangGraph node as it executes.</p>',
+        unsafe_allow_html=True,
+    )
 
     text = st.text_area(
         "Article",
-        height=180,
+        height=200,
         placeholder="Paste article text…",
         key="deep_input",
         label_visibility="collapsed",
@@ -108,6 +84,7 @@ def render():
         if st.button("Clear", key="da_clear"):
             st.session_state["deep_pending_example"] = ""
             st.session_state.pop("deep_agent_out", None)
+            st.session_state.pop("deep_agent_timeline", None)
             st.rerun()
 
     run = st.button("Run deep analysis", type="primary", use_container_width=False)
@@ -118,12 +95,59 @@ def render():
             st.warning(err)
         else:
             try:
-                with st.spinner("Running agent…"):
-                    out = invoke_credibility_agent(
+                events: list[tuple[str, dict]] = []
+                caption = (
+                    "Live LangGraph run: each row is one graph node and the source file that executed it."
+                )
+
+                def _tick(node_name: str, merged: dict) -> None:
+                    events.append((node_name, dict(merged)))
+                    live.markdown(
+                        '<p class="da-flow-head">Running · '
+                        f"{_escape_html(node_name)}</p>"
+                        + timeline_events_html(events, pulse_last=True),
+                        unsafe_allow_html=True,
+                    )
+
+                live = st.empty()
+                if hasattr(st, "status"):
+                    with st.status("Credibility agent · running", expanded=True) as run_status:
+                        st.caption(caption)
+                        for node_name, merged in iter_credibility_agent(
+                            text.strip(),
+                            confidence_threshold=_DEEP_ANALYSIS_ALWAYS_RAG_THRESHOLD,
+                        ):
+                            _tick(node_name, merged)
+                        if events:
+                            live.markdown(
+                                '<p class="da-flow-head">Pipeline complete</p>'
+                                + timeline_events_html(events, pulse_last=False),
+                                unsafe_allow_html=True,
+                            )
+                        run_status.update(
+                            label="Credibility agent · finished",
+                            state="complete",
+                            expanded=False,
+                        )
+                else:
+                    st.caption(caption)
+                    for node_name, merged in iter_credibility_agent(
                         text.strip(),
                         confidence_threshold=_DEEP_ANALYSIS_ALWAYS_RAG_THRESHOLD,
-                    )
-                st.session_state["deep_agent_out"] = out
+                    ):
+                        _tick(node_name, merged)
+                    if events:
+                        live.markdown(
+                            '<p class="da-flow-head">Pipeline complete</p>'
+                            + timeline_events_html(events, pulse_last=False),
+                            unsafe_allow_html=True,
+                        )
+
+                if not events:
+                    st.error("Agent produced no steps. Check logs and dependencies.")
+                else:
+                    st.session_state["deep_agent_out"] = events[-1][1]
+                    st.session_state["deep_agent_timeline"] = events
             except Exception as e:
                 logger.exception("Deep analysis failed: %s", e)
                 st.error("Analysis failed. Check model files, RAG index, and API keys (see README).")
@@ -133,6 +157,15 @@ def render():
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
+    trace = st.session_state.get("deep_agent_timeline")
+    if trace:
+        with st.expander("Execution trace (files & steps)", expanded=False):
+            st.markdown(
+                '<p class="da-flow-head">Last run · node order</p>'
+                + timeline_events_html(trace, pulse_last=False),
+                unsafe_allow_html=True,
+            )
+
     fr = out.get("final_report") or {}
     verdict = fr.get("verdict") or "Unknown"
     confidence = fr.get("confidence") or ""
@@ -140,12 +173,16 @@ def render():
     risks = fr.get("risk_factors") or []
     sources = fr.get("sources") or []
 
-    # Verdict + confidence
+    # Verdict + confidence (card + semantic tint)
     v_lower = verdict.lower()
-    accent = "#b91c1c" if v_lower == "fake" else "#15803d" if v_lower == "real" else "#64748b"
+    v_slug = v_lower if v_lower in ("fake", "real") else "unknown"
+    accent = "#b91c1c" if v_slug == "fake" else "#15803d" if v_slug == "real" else "#64748b"
+    verdict_e = _escape_html(str(verdict))
+    conf_e = _escape_html(str(confidence))
     st.markdown(
-        f'<p class="da-verdict" style="color:{accent};">{verdict}</p>'
-        f'<p class="da-sub">{confidence}</p>',
+        f'<div class="da-verdict-card da-verdict-{v_slug}">'
+        f'<p class="da-verdict" style="color:{accent};">{verdict_e}</p>'
+        f'<p class="da-sub">{conf_e}</p></div>',
         unsafe_allow_html=True,
     )
 
@@ -165,7 +202,7 @@ def render():
             ex = _escape_html(str(s.get("excerpt") or ""))
             sc = float(s.get("score") or 0.0)
             st.markdown(
-                f'<div class="da-source"><strong>#{i}</strong> · relevance {sc:.2f}<br/>{ex}'
+                f'<div class="da-source-card" style="--da-s:{i - 1}"><strong>#{i}</strong> · relevance {sc:.2f}<br/>{ex}'
                 f'<div class="da-meta">Local RAG index · not external URLs</div></div>',
                 unsafe_allow_html=True,
             )
@@ -188,7 +225,17 @@ def render():
                 "unknown items (Groq verification when an API key is set)."
             )
         for row in rows:
-            st.caption(f"{row.get('status', '').upper()} · {row.get('finding', '')}")
+            status = (row.get("status") or "unknown").lower()
+            if status not in ("supported", "contradicted", "unknown"):
+                status = "unknown"
+            tag = (row.get("status") or "unknown").upper()
+            finding = _escape_html(str(row.get("finding") or ""))
+            st.markdown(
+                f'<div class="da-fact" style="--da-s:0">'
+                f'<span class="da-fact-tag da-fact-tag-{status}">{_escape_html(tag)}</span>'
+                f"<span>{finding}</span></div>",
+                unsafe_allow_html=True,
+            )
 
     st.markdown("</div>", unsafe_allow_html=True)
 

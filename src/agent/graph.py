@@ -8,7 +8,7 @@ High confidence: report only (still uses Groq for narrative when configured).
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any, Dict, Iterator, Literal, Optional, Tuple, cast
 
 from langgraph.graph import END, START, StateGraph
 
@@ -111,6 +111,34 @@ def get_entry_node() -> str:
     return "normalize"
 
 
+def iter_credibility_agent(
+    raw_text: str,
+    *,
+    pipeline: Any = None,
+    store_dir: Optional[Path] = None,
+    confidence_threshold: float = DEFAULT_LOW_CONFIDENCE_THRESHOLD,
+    top_k: int = 5,
+) -> Iterator[Tuple[str, AgentState]]:
+    """
+    Stream graph execution: after each node, yield ``(node_name, merged_state)``.
+
+    Uses LangGraph ``stream_mode="updates"`` so UIs can show live progress
+    (e.g. Deep Analysis timeline).
+    """
+    graph = build_graph(
+        pipeline=pipeline,
+        store_dir=store_dir,
+        confidence_threshold=confidence_threshold,
+        top_k=top_k,
+    )
+    seed: Dict[str, Any] = {"raw_text": (raw_text or "").strip()}
+    merged: Dict[str, Any] = dict(seed)
+    for chunk in graph.stream(seed, stream_mode="updates"):
+        for node_name, update in chunk.items():
+            merged = {**merged, **update}
+            yield str(node_name), cast(AgentState, dict(merged))
+
+
 def invoke_credibility_agent(
     raw_text: str,
     *,
@@ -132,13 +160,16 @@ def invoke_credibility_agent(
     Returns:
         Final merged ``AgentState`` including ``final_report``.
     """
-    graph = build_graph(
+    last: Optional[AgentState] = None
+    for _, state in iter_credibility_agent(
+        raw_text,
         pipeline=pipeline,
         store_dir=store_dir,
         confidence_threshold=confidence_threshold,
         top_k=top_k,
-    )
-    return graph.invoke({"raw_text": raw_text})
+    ):
+        last = state
+    return last or cast(AgentState, {"raw_text": (raw_text or "").strip()})
 
 
 def run_graph_stub(state: AgentState) -> AgentState:
