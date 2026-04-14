@@ -24,11 +24,19 @@ class AgentState(TypedDict, total=False):
         queries: Search strings produced by ``plan_queries`` (low-confidence path).
         llm_query_error: Populated when Groq query planning fails (fallback queries used).
         retrieved_chunks: Top-k RAG hits; each item includes text, score, id, metadata.
+        rag_backend: Retrieval backend ("faiss" | "chroma").
+        rag_search_type: Retrieval mode ("similarity" | "mmr").
+        rag_fetch_k: Candidate pool size for MMR.
+        rag_lambda_mult: MMR tradeoff (0..1).
         rag_error: Set when the retriever skips or fails (index missing, etc.).
         verification: Verifier output; always includes ``supported``, ``contradicted``,
             ``unknown`` (each a ``list[str]``), plus ``mode``, ``llm``, ``chunks_reviewed``.
         final_report: UI payload with ``summary``, ``risk_factors``, ``fact_checks``,
-            ``verdict``, ``confidence``, ``sources`` (see ``src.agent.ui_report``).
+            ``verdict``, ``confidence``, ``sources``, ``credibility_score`` (High | Low),
+            ``pattern_detection_summary``, ``disclaimer`` (see ``src.agent.ui_report``).
+        report_attempt: Integer attempt count for the report/validation loop.
+        validation_passed: Whether output validation succeeded.
+        validation_errors: Short strings describing failed validations.
         error: Normalize / ML failure message; graph still reaches ``report``.
     """
 
@@ -41,9 +49,16 @@ class AgentState(TypedDict, total=False):
     queries: List[str]
     llm_query_error: Optional[str]
     retrieved_chunks: List[Dict[str, Any]]
+    rag_backend: str
+    rag_search_type: str
+    rag_fetch_k: int
+    rag_lambda_mult: float
     rag_error: Optional[str]
     verification: Dict[str, Any]
     final_report: Dict[str, Any]
+    report_attempt: int
+    validation_passed: bool
+    validation_errors: List[str]
     error: Optional[str]
 
 

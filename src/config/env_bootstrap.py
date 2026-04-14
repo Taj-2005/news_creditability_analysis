@@ -43,6 +43,9 @@ def merge_dotenv_over_empty_env_keys(env_path: Optional[Path] = None) -> None:
     for key in (
         "GROQ_API_KEY",
         "GROQ_MODEL",
+        "LLM_PROVIDER",
+        "GEMINI_API_KEY",
+        "GEMINI_MODEL",
         "HF_HOME",
         "HUGGINGFACE_HUB_TOKEN",
         "HF_TOKEN",
@@ -98,6 +101,9 @@ def _inject_streamlit_secrets() -> None:
     for key in (
         "GROQ_API_KEY",
         "GROQ_MODEL",
+        "LLM_PROVIDER",
+        "GEMINI_API_KEY",
+        "GEMINI_MODEL",
         "HF_HOME",
         "HUGGINGFACE_HUB_TOKEN",
         "HF_TOKEN",
@@ -134,13 +140,29 @@ def _inject_streamlit_secrets() -> None:
     except Exception:
         pass
 
+    try:
+        gem_block = secrets.get("gemini")
+        if isinstance(gem_block, dict):
+            if not _env_nonempty("GEMINI_API_KEY"):
+                _set_env_if_unset(
+                    "GEMINI_API_KEY",
+                    gem_block.get("api_key") or gem_block.get("API_KEY"),
+                )
+            if not _env_nonempty("GEMINI_MODEL"):
+                _set_env_if_unset(
+                    "GEMINI_MODEL",
+                    gem_block.get("model") or gem_block.get("MODEL"),
+                )
+    except Exception:
+        pass
+
 
 def bootstrap_runtime_env() -> None:
     """
     Load local ``.env`` and apply Streamlit Cloud secrets to the environment.
 
-    Call from the Streamlit entrypoint before any code that reads ``GROQ_*`` or
-    Hugging Face tokens from ``os.environ``.
+    Call from the Streamlit entrypoint before any code that reads ``GROQ_*``,
+    ``GEMINI_*``, ``LLM_PROVIDER``, or Hugging Face tokens from ``os.environ``.
     """
     _load_dotenv_from_repo()
     _inject_streamlit_secrets()

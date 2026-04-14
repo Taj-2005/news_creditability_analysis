@@ -1,5 +1,7 @@
 """Architecture — system diagram (Mermaid), train vs inference, repo mapping. Enhanced card-based layout."""
 
+import html
+
 import streamlit as st
 
 from src.app.components.architecture_flow import (
@@ -231,9 +233,10 @@ def _inject_styles():
 
 # ── Mermaid renderer ──────────────────────────────────────────────────────────
 def _mermaid_html(diagram: str, height: int = 280, label: str = "") -> str:
+    """Embed Mermaid. Prefer a Streamlit ``st.markdown`` label above the iframe so captions are never clipped."""
+    esc = html.escape(label, quote=True)
     label_html = (
-        f'<div style="font-family:monospace;font-size:10px;letter-spacing:.14em;'
-        f'text-transform:uppercase;color:#94a3b8;padding:0 12px 10px;">{label}</div>'
+        f'<div class="mermaid-cap">{esc}</div>'
         if label else ""
     )
     return f"""<!DOCTYPE html>
@@ -246,16 +249,32 @@ def _mermaid_html(diagram: str, height: int = 280, label: str = "") -> str:
     background: #f8fafc;
     font-family: monospace;
   }}
+  .mermaid-cap {{
+    display: block;
+    font-family: ui-monospace, 'Cascadia Code', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #334155;
+    padding: 10px 12px 8px;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+  }}
   .wrap {{
     background: #f8fafc;
     border: 1px solid #e2e8f0;
     border-radius: 10px;
-    padding: 16px 8px 12px;
-    overflow: visible;
-
+    padding: 0 8px 12px;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
   }}
   .mermaid {{
     text-align: center;
+    padding-top: 8px;
+    flex: 1 1 auto;
   }}
   /* Mermaid SVG overrides */
   .mermaid svg {{
@@ -302,17 +321,21 @@ def _mermaid_html(diagram: str, height: int = 280, label: str = "") -> str:
 # ── Page ──────────────────────────────────────────────────────────────────────
 def render():
     _inject_styles()
-    page_header("System architecture", "End-to-end flow from data to deployment.")
+    page_header(
+        "System architecture",
+        "Project 11 — ML training + LangGraph agent runtime, RAG (FAISS/Chroma + MMR), and LLM hooks (Groq/Gemini).",
+    )
 
     # ── Milestone 2: animated agentic runtime (HTML/CSS) ───────────────────────
-    st.markdown('<p class="arch-eyebrow">00 / Agentic runtime</p>', unsafe_allow_html=True)
+    st.markdown('<p class="arch-eyebrow">01 / Agentic runtime</p>', unsafe_allow_html=True)
     st.markdown(
         '<h2 class="arch-heading">Milestone 2 · ML, RAG, and LLM in one pipeline</h2>',
         unsafe_allow_html=True,
     )
     st.caption(
-        "Interactive diagram: highlight the **ML-only shortcut** vs the **full agent path** "
-        "(query planning → FAISS retrieval → verification → structured report)."
+        "Interactive diagram: **ML-only story** (Live Prediction Lab — no LangGraph) vs **full agent** "
+        "(Deep Analysis — LangGraph: plan → retrieve → verify → report → validate_report). "
+        "RAG backend (FAISS/Chroma), **similarity vs MMR**, and LLM provider are configured on the **Deep Analysis** tab."
     )
     path_choice = st.radio(
         "Path emphasis",
@@ -329,8 +352,15 @@ def render():
     st.markdown('<hr class="arch-rule">', unsafe_allow_html=True)
 
     # ── Section 1: Mermaid diagrams ──
-    st.markdown('<p class="arch-eyebrow">01 / Pipeline diagrams</p>', unsafe_allow_html=True)
-    st.markdown('<h2 class="arch-heading">High-level workflow</h2>', unsafe_allow_html=True)
+    st.markdown('<p class="arch-eyebrow">02 / Pipeline diagrams</p>', unsafe_allow_html=True)
+    st.markdown(
+        '<h2 class="arch-heading">Training vs runtime (Mermaid)</h2>',
+        unsafe_allow_html=True,
+    )
+    st.caption(
+        "Top: **offline training** (Kaggle CSVs → TF-IDF → compare LR/NB/RF/SVM → `pipeline.pkl`). "
+        "Bottom: **Deep Analysis runtime** — LangGraph with ML gating, RAG (FAISS or Chroma), LLM verify/plan, and report validation."
+    )
 
     training_mermaid = """
 flowchart LR
@@ -361,28 +391,42 @@ flowchart TB
     U[User input] --> N[normalize]
     N --> M[ml_classify TF-IDF + model]
     M --> R{ml_confidence < threshold?}
-    R -->|Yes| Q[plan_queries Groq]
-    Q --> F[retrieve FAISS]
-    F --> V[verify Groq or HF]
+    R -->|Yes| Q[plan_queries LLM]
+    Q --> F[retrieve FAISS or Chroma\\nmode: similarity or MMR]
+    F --> V[verify LLM\\nGemini may fall back to Groq]
     V --> Rep[report + ui_report]
     R -->|No / error| Rep
-    Rep --> O[Verdict + structured fields]
+    Rep --> Val{validate_report}
+    Val -->|pass| O[final_report to UI]
+    Val -->|fail · retry once| RepR[report again]
+    RepR --> Val2{validate_report}
+    Val2 --> O
     """
 
-    st.components.v1.html(
-        _mermaid_html(training_mermaid, height=280, label="Training pipeline"),
-        height=330, scrolling=False
+    st.markdown(
+        '<p class="arch-eyebrow" style="margin-bottom:2px;">Training pipeline</p>',
+        unsafe_allow_html=True,
     )
-    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
     st.components.v1.html(
-        _mermaid_html(inference_mermaid, height=320, label="Runtime · LangGraph + ML branch"),
-        height=380, scrolling=False
+        _mermaid_html(training_mermaid, height=280, label=""),
+        height=320,
+        scrolling=True,
+    )
+    st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+    st.markdown(
+        '<p class="arch-eyebrow" style="margin-bottom:2px;">Runtime · LangGraph + ML branch</p>',
+        unsafe_allow_html=True,
+    )
+    st.components.v1.html(
+        _mermaid_html(inference_mermaid, height=320, label=""),
+        height=440,
+        scrolling=True,
     )
 
     st.markdown('<hr class="arch-rule">', unsafe_allow_html=True)
 
     # ── Section 2: End-to-end text flow ──
-    st.markdown('<p class="arch-eyebrow">02 / Data source</p>', unsafe_allow_html=True)
+    st.markdown('<p class="arch-eyebrow">03 / Data source</p>', unsafe_allow_html=True)
     st.markdown('<h2 class="arch-heading">End-to-end flow</h2>', unsafe_allow_html=True)
 
     st.markdown(
@@ -412,15 +456,18 @@ flowchart TB
           <span class="flow-arrow">→</span>
           <span class="flow-step">normalize + ml_classify</span>
           <span class="flow-arrow">→</span>
-          <span class="flow-step">conditional</span>
+          <span class="flow-step">branch</span>
           <span class="flow-arrow">→</span>
           <span class="flow-step">plan → RAG → verify</span>
           <span class="flow-arrow">→</span>
-          <span class="flow-step highlight">report + verdict</span>
+          <span class="flow-step">report</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-step highlight">validate_report → UI</span>
         </div>
         <p style="font-size:12px;color:#64748b;margin-top:10px;font-family:'DM Mono',monospace;">
-          Low ML confidence triggers RAG + LLM verification; high confidence skips to report.
-          Live Prediction uses the classifier path only; Deep Analysis runs the full graph (UI may force RAG).
+          Low ML confidence runs plan → retrieve (FAISS/Chroma, similarity/MMR) → verify → report → validate_report.
+          High confidence skips plan/retrieve/verify but still runs report → validate_report.
+          <strong>Live Prediction Lab</strong> is ML-only (no LangGraph). <strong>Deep Analysis</strong> streams the full agent; RAG/LLM options live on that page.
         </p>
         """,
         unsafe_allow_html=True,
@@ -429,7 +476,7 @@ flowchart TB
     st.markdown('<hr class="arch-rule">', unsafe_allow_html=True)
 
     # ── Section 3: Training vs Inference cards ──
-    st.markdown('<p class="arch-eyebrow">03 / Runtime separation</p>', unsafe_allow_html=True)
+    st.markdown('<p class="arch-eyebrow">04 / Runtime separation</p>', unsafe_allow_html=True)
     st.markdown('<h2 class="arch-heading">Training vs inference</h2>', unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -498,12 +545,12 @@ flowchart TB
                 <div class="file-item">
                   <span class="arrow">▸</span>
                   <div><span class="file-name">src/agent/graph.py</span><br>
-                  <span class="file-desc">LangGraph: normalize → ML → branch → report (optional RAG path)</span></div>
+                  <span class="file-desc">LangGraph: normalize → ML → branch → report → validate_report (bounded retry)</span></div>
                 </div>
                 <div class="file-item">
                   <span class="arrow">▸</span>
                   <div><span class="file-name">src/agent/llm_service.py</span><br>
-                  <span class="file-desc">Groq primary; Hugging Face inference API when configured</span></div>
+                  <span class="file-desc">Groq primary; optional Gemini; Gemini errors fall back to Groq when configured</span></div>
                 </div>
                 <div class="file-item">
                   <span class="arrow">▸</span>
@@ -519,7 +566,7 @@ flowchart TB
     st.markdown('<hr class="arch-rule">', unsafe_allow_html=True)
 
     # ── Section 4: Repo table ──
-    st.markdown('<p class="arch-eyebrow">04 / Codebase</p>', unsafe_allow_html=True)
+    st.markdown('<p class="arch-eyebrow">05 / Codebase</p>', unsafe_allow_html=True)
     st.markdown('<h2 class="arch-heading">Repository mapping <code style="font-size:16px;font-weight:300;">src/</code></h2>', unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -555,11 +602,19 @@ flowchart TB
             </tr>
             <tr>
               <td>src/agent/</td>
-              <td>LangGraph workflow, nodes (normalize, ml_classify, plan_queries, retrieve, verify, report), state</td>
+              <td>LangGraph workflow, nodes (normalize, ml_classify, plan_queries, retrieve, verify, report, validate_report), feedback helper</td>
+            </tr>
+            <tr>
+              <td>src/rag/</td>
+              <td>MiniLM embeddings, FAISS store, optional Chroma store + retrieval (similarity / MMR)</td>
             </tr>
             <tr>
               <td>data/rag/</td>
-              <td>FAISS index + chunk metadata for retrieval (build via scripts when needed)</td>
+              <td><code>faiss.index</code> + <code>chunks.json</code> (and optional <code>chroma_store/</code>) — build via <code>scripts/build_rag_index.py</code> / <code>build_chroma_store.py</code></td>
+            </tr>
+            <tr>
+              <td>scripts/</td>
+              <td><code>run_evaluation.py</code>, <code>build_rag_index.py</code>, <code>build_chroma_store.py</code></td>
             </tr>
           </tbody>
         </table>
@@ -570,37 +625,49 @@ flowchart TB
     st.markdown('<hr class="arch-rule">', unsafe_allow_html=True)
 
     # ── Section 5: Repo structure Mermaid ──
-    st.markdown('<p class="arch-eyebrow">05 / Structure</p>', unsafe_allow_html=True)
+    st.markdown('<p class="arch-eyebrow">06 / Structure</p>', unsafe_allow_html=True)
     st.markdown('<h2 class="arch-heading">Repo structure</h2>', unsafe_allow_html=True)
 
     repo_mermaid = """
-flowchart LR
+flowchart TB
     subgraph ROOT["Repo root"]
-        DS[dataset/]
-        APP[app.py]
+        DS[dataset CSVs]
+        APP[app.py entry]
         NB[notebook]
-        SCRIPT[run_evaluation.py]
-        MD["model/pipeline.pkl"]
+        SR[run_evaluation.py]
+        BR[build_rag_index.py]
+        BC[build_chroma_store.py]
+        PKL[pipeline.pkl]
+        RAGF[data rag FAISS chunks]
+        RAGC[data rag chroma_store]
     end
-    subgraph SRC["src/"]
-        DATA[data/loader]
-        FEAT[features/preprocessing]
-        MOD[models/pipelines]
-        EVAL[evaluation/]
-        APP_P[app/]
+    subgraph SRC["src package"]
+        DATA[data loader]
+        FEAT[features preprocess]
+        MOD[models pipelines]
+        EVAL[evaluation]
+        RMOD[rag FAISS Chroma MiniLM]
+        AG[agent LangGraph]
+        APP_P[app Streamlit]
     end
     DS --> DATA
-    DATA --> FEAT
-    FEAT --> MOD
-    MOD --> EVAL
-    EVAL --> MD
-    MD --> APP_P
+    DATA --> FEAT --> MOD --> EVAL
+    EVAL --> PKL
+    PKL --> AG
+    BR --> RAGF
+    BC --> RAGC
+    RMOD --> RAGF
+    RMOD --> RAGC
+    RAGF --> AG
+    RAGC --> AG
+    AG --> APP_P
     NB --> DATA
-    SCRIPT --> DATA
+    SR --> DATA
     APP --> APP_P
     """
 
     st.components.v1.html(
-        _mermaid_html(repo_mermaid, height=260, label="Full repository structure"),
-        height=400, scrolling=True,
+        _mermaid_html(repo_mermaid, height=340, label="Repository map — ML artifacts, RAG store, agent, app"),
+        height=460,
+        scrolling=True,
     )

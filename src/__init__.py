@@ -5,7 +5,7 @@ Classifies news articles as Fake (1) or Real (0) using TF-IDF and
 classical ML models on the Fake and Real News (Kaggle) dataset.
 """
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"
 
 __author__ = (
     "Taj-2005 <https://github.com/Taj-2005>",

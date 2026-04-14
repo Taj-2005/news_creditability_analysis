@@ -1,65 +1,287 @@
 [
   {
     "id": 0,
-    "text": "Federal Reserve officials held rates steady citing inflation trends and labor market balance. Analysts expect gradual adjustments over the next quarters.",
+    "text": "## Why it matters Health claims are a common misinformation vector. Basic evaluation heuristics reduce harm when the content is uncertain.",
     "metadata": {
-      "doc_index": 0,
+      "source_file": "cdc_health_info_evaluation.md",
+      "source_rel": "data/rag/knowledge_base/cdc_health_info_evaluation.md",
+      "kb_file_index": 1,
+      "section_index": 1,
       "chunk_index": 0
     }
   },
   {
     "id": 1,
-    "text": "Clinical trial results published in a peer-reviewed journal showed improved outcomes for patients receiving the standard-of-care protocol versus placebo.",
+    "text": "## Evaluation checklist (summary) - **Identify the source**: who publishes the page (institution / agency / author)? - **Prefer authoritative domains** for public health guidance (e.g., `.gov`, national agencies, WHO). - **Check the date**: health guidance changes; stale content can mislead. - **Look for evidence**: credible medical claims should be consistent with scientific consensus and cite studies/guidance. - **",
     "metadata": {
-      "doc_index": 1,
+      "source_file": "cdc_health_info_evaluation.md",
+      "source_rel": "data/rag/knowledge_base/cdc_health_info_evaluation.md",
+      "kb_file_index": 1,
+      "section_index": 2,
       "chunk_index": 0
     }
   },
   {
     "id": 2,
-    "text": "City council approved a budget increase for public transit maintenance and safety upgrades scheduled to begin next fiscal year.",
+    "text": "s should be consistent with scientific consensus and cite studies/guidance. - **Cross-check**: compare across multiple trusted sources rather than relying on a single post/site.",
     "metadata": {
-      "doc_index": 2,
-      "chunk_index": 0
+      "source_file": "cdc_health_info_evaluation.md",
+      "source_rel": "data/rag/knowledge_base/cdc_health_info_evaluation.md",
+      "kb_file_index": 1,
+      "section_index": 2,
+      "chunk_index": 1
     }
   },
   {
     "id": 3,
-    "text": "BREAKING YOU WONT BELIEVE miracle cure doctors hate this one trick share before deleted click now for secret government cover up exposed.",
+    "text": "## Reference - CDC Health Literacy: “Use of Online Health Information” (links to training and evaluation resources): `https://www.cdc.gov/health-literacy/php/older-adults/online-health-information.html`",
     "metadata": {
-      "doc_index": 3,
+      "source_file": "cdc_health_info_evaluation.md",
+      "source_rel": "data/rag/knowledge_base/cdc_health_info_evaluation.md",
+      "kb_file_index": 1,
+      "section_index": 3,
       "chunk_index": 0
     }
   },
   {
     "id": 4,
-    "text": "Scientists warn that extraordinary claims require rigorous replication before policy recommendations can be considered credible.",
+    "text": "## Goal Avoid “context collapse”: real media reused with false date/location/caption.",
     "metadata": {
-      "doc_index": 4,
+      "source_file": "image_video_verification.md",
+      "source_rel": "data/rag/knowledge_base/image_video_verification.md",
+      "kb_file_index": 2,
+      "section_index": 1,
       "chunk_index": 0
     }
   },
   {
     "id": 5,
-    "text": "Weather service issued a routine advisory for coastal areas with minor flooding possible during high tide; residents should follow local guidance.",
+    "text": "## Practical checks - **Context**: what event is claimed (who/what/when/where)? Is the caption specific or vague? - **Reverse image search** (when available) to find earliest appearances and original context. - **Look for cropping / edits**: mismatched shadows, inconsistent fonts, unnatural edges, repeated patterns. - **Check independent coverage**: major events usually have multiple independent reports. - **Beware “",
     "metadata": {
-      "doc_index": 5,
+      "source_file": "image_video_verification.md",
+      "source_rel": "data/rag/knowledge_base/image_video_verification.md",
+      "kb_file_index": 2,
+      "section_index": 2,
       "chunk_index": 0
     }
   },
   {
     "id": 6,
-    "text": "Celebrity death hoax spreads on social media using sensational headlines and urgent calls to share; fact-checkers recommend verifying primary sources.",
+    "text": "coverage**: major events usually have multiple independent reports. - **Beware “urgent share” framing**: emotional calls to action increase misinformation spread.",
     "metadata": {
-      "doc_index": 6,
-      "chunk_index": 0
+      "source_file": "image_video_verification.md",
+      "source_rel": "data/rag/knowledge_base/image_video_verification.md",
+      "kb_file_index": 2,
+      "section_index": 2,
+      "chunk_index": 1
     }
   },
   {
     "id": 7,
-    "text": "Trade negotiators concluded a technical round on tariff schedules with further meetings planned; no final agreement was announced.",
+    "text": "## When to label “unknown” If the media is plausible but you cannot establish the original context, treat the claim as **unverified**.",
     "metadata": {
-      "doc_index": 7,
+      "source_file": "image_video_verification.md",
+      "source_rel": "data/rag/knowledge_base/image_video_verification.md",
+      "kb_file_index": 2,
+      "section_index": 3,
+      "chunk_index": 0
+    }
+  },
+  {
+    "id": 8,
+    "text": "## Linguistic / framing patterns - **“Miracle cure” / “one weird trick”** framing with absolute certainty. - **Urgency + virality**: “share before deleted”, “they don’t want you to know”. - **Overclaiming evidence**: “scientists proved” without naming a study, journal, or institution. - **Conspiracy scaffolding**: “cover-up”, “mainstream media won’t report”. - **Anonymous authority**: “a doctor said”, “an insider rev",
+    "metadata": {
+      "source_file": "misinformation_red_flags.md",
+      "source_rel": "data/rag/knowledge_base/misinformation_red_flags.md",
+      "kb_file_index": 3,
+      "section_index": 1,
+      "chunk_index": 0
+    }
+  },
+  {
+    "id": 9,
+    "text": "media won’t report”. - **Anonymous authority**: “a doctor said”, “an insider revealed” with no identity.",
+    "metadata": {
+      "source_file": "misinformation_red_flags.md",
+      "source_rel": "data/rag/knowledge_base/misinformation_red_flags.md",
+      "kb_file_index": 3,
+      "section_index": 1,
+      "chunk_index": 1
+    }
+  },
+  {
+    "id": 10,
+    "text": "## Evidence patterns - No primary source, no data, no reproducible reference. - Screenshots of posts instead of original documents. - Single source repeated across multiple low-quality sites.",
+    "metadata": {
+      "source_file": "misinformation_red_flags.md",
+      "source_rel": "data/rag/knowledge_base/misinformation_red_flags.md",
+      "kb_file_index": 3,
+      "section_index": 2,
+      "chunk_index": 0
+    }
+  },
+  {
+    "id": 11,
+    "text": "## Safer handling When signals are strong but evidence is absent, categorize as **high risk / low credibility** and mark key claims as **unknown** until corroborated.",
+    "metadata": {
+      "source_file": "misinformation_red_flags.md",
+      "source_rel": "data/rag/knowledge_base/misinformation_red_flags.md",
+      "kb_file_index": 3,
+      "section_index": 3,
+      "chunk_index": 0
+    }
+  },
+  {
+    "id": 12,
+    "text": "## What it is Reuters’ published standards emphasize **accuracy**, **transparent corrections**, and **honest sourcing**. This is useful as a credibility rubric: what would a careful newsroom require before stating a claim as fact?",
+    "metadata": {
+      "source_file": "reuters_sourcing_basics.md",
+      "source_rel": "data/rag/knowledge_base/reuters_sourcing_basics.md",
+      "kb_file_index": 4,
+      "section_index": 1,
+      "chunk_index": 0
+    }
+  },
+  {
+    "id": 13,
+    "text": "## Practical sourcing rules (summary) - **Prefer named sources** whenever possible; anonymity should be exceptional and justified. - **Cross-check**: two independent sources are generally stronger than one. - **Avoid misleading sourcing language**: do not imply verification you don’t have; be explicit about uncertainty. - **Attribute clearly** when material is not your own (photos, video, claims from another outlet).",
+    "metadata": {
+      "source_file": "reuters_sourcing_basics.md",
+      "source_rel": "data/rag/knowledge_base/reuters_sourcing_basics.md",
+      "kb_file_index": 4,
+      "section_index": 2,
+      "chunk_index": 0
+    }
+  },
+  {
+    "id": 14,
+    "text": "rly** when material is not your own (photos, video, claims from another outlet). - **Resist “rumor-first” reporting**: distinguish fact vs rumor; explain why something is being reported (e.g., market impact) and what is verified.",
+    "metadata": {
+      "source_file": "reuters_sourcing_basics.md",
+      "source_rel": "data/rag/knowledge_base/reuters_sourcing_basics.md",
+      "kb_file_index": 4,
+      "section_index": 2,
+      "chunk_index": 1
+    }
+  },
+  {
+    "id": 15,
+    "text": "## Signals of higher credibility - Clear attribution (who said what, when, where, under what conditions). - Primary evidence or direct observation, not “it was learned/announced” without a source. - Transparent correction behavior (errors acknowledged promptly).",
+    "metadata": {
+      "source_file": "reuters_sourcing_basics.md",
+      "source_rel": "data/rag/knowledge_base/reuters_sourcing_basics.md",
+      "kb_file_index": 4,
+      "section_index": 3,
+      "chunk_index": 0
+    }
+  },
+  {
+    "id": 16,
+    "text": "## Reference - Reuters Journalistic Standards (Standards & Values / sourcing / attribution): `https://handbook.reuters.com/` (See “Sourcing”, “Attribution”, and “Reporting rumours”.)",
+    "metadata": {
+      "source_file": "reuters_sourcing_basics.md",
+      "source_rel": "data/rag/knowledge_base/reuters_sourcing_basics.md",
+      "kb_file_index": 4,
+      "section_index": 4,
+      "chunk_index": 0
+    }
+  },
+  {
+    "id": 17,
+    "text": "## Identity & accountability - Is there a **real author / organization** with a track record? - Is there a clear **About / Contact** page and verifiable affiliation? - Are claims **attributed** to named sources or primary documents?",
+    "metadata": {
+      "source_file": "source_evaluation_checklist.md",
+      "source_rel": "data/rag/knowledge_base/source_evaluation_checklist.md",
+      "kb_file_index": 5,
+      "section_index": 1,
+      "chunk_index": 0
+    }
+  },
+  {
+    "id": 18,
+    "text": "## Evidence quality - Does the article link to **primary documents** (official statements, datasets, court filings, peer‑reviewed papers)? - Are statistics presented with denominators, time windows, and definitions? - Are counterpoints or limitations acknowledged?",
+    "metadata": {
+      "source_file": "source_evaluation_checklist.md",
+      "source_rel": "data/rag/knowledge_base/source_evaluation_checklist.md",
+      "kb_file_index": 5,
+      "section_index": 2,
+      "chunk_index": 0
+    }
+  },
+  {
+    "id": 19,
+    "text": "## Consistency checks - Check the same claim across multiple independent outlets or official sources. - Check time: is the claim **current** or recycled?",
+    "metadata": {
+      "source_file": "source_evaluation_checklist.md",
+      "source_rel": "data/rag/knowledge_base/source_evaluation_checklist.md",
+      "kb_file_index": 5,
+      "section_index": 3,
+      "chunk_index": 0
+    }
+  },
+  {
+    "id": 20,
+    "text": "## Common failure modes - Overreliance on unnamed sources, sensational headlines, or “handout” media without origin. - Mixing commentary/opinion with factual claims without clear labeling.",
+    "metadata": {
+      "source_file": "source_evaluation_checklist.md",
+      "source_rel": "data/rag/knowledge_base/source_evaluation_checklist.md",
+      "kb_file_index": 5,
+      "section_index": 4,
+      "chunk_index": 0
+    }
+  },
+  {
+    "id": 21,
+    "text": "## What it is The World Health Organization (WHO) proposes the **SHARE** checklist to help people slow down and evaluate content before sharing.",
+    "metadata": {
+      "source_file": "who_share_checklist.md",
+      "source_rel": "data/rag/knowledge_base/who_share_checklist.md",
+      "kb_file_index": 6,
+      "section_index": 1,
+      "chunk_index": 0
+    }
+  },
+  {
+    "id": 22,
+    "text": "## Checklist (SHARE) - **S — Source**: Prefer official / primary sources for health & safety information (e.g., WHO, national public health authorities). - **H — Headline**: Headlines can mislead; read beyond the headline and scan the full article. - **A — Analyse**: If a claim sounds unbelievable, treat it as suspicious; look for evidence and corroboration. - **R — Retouched**: Images/videos can be edited or unrelat",
+    "metadata": {
+      "source_file": "who_share_checklist.md",
+      "source_rel": "data/rag/knowledge_base/who_share_checklist.md",
+      "kb_file_index": 6,
+      "section_index": 2,
+      "chunk_index": 0
+    }
+  },
+  {
+    "id": 23,
+    "text": "e and corroboration. - **R — Retouched**: Images/videos can be edited or unrelated; verify context and re-use. - **E — Error**: Typos, inconsistent formatting, and “off” presentation can be signals of low-quality or false content.",
+    "metadata": {
+      "source_file": "who_share_checklist.md",
+      "source_rel": "data/rag/knowledge_base/who_share_checklist.md",
+      "kb_file_index": 6,
+      "section_index": 2,
+      "chunk_index": 1
+    }
+  },
+  {
+    "id": 24,
+    "text": "## When to mark as “unknown” If the content is emotional or urgent but you cannot find a clear source or corroboration, treat it as **uncertain** rather than true/false.",
+    "metadata": {
+      "source_file": "who_share_checklist.md",
+      "source_rel": "data/rag/knowledge_base/who_share_checklist.md",
+      "kb_file_index": 6,
+      "section_index": 3,
+      "chunk_index": 0
+    }
+  },
+  {
+    "id": 25,
+    "text": "## Reference - WHO: “Be careful what you share. Things aren’t always what they seem online.” `https://www.who.int/news/item/22-09-2021-be-careful-what-you-share.-things-aren-t-always-what-they-seem-online`",
+    "metadata": {
+      "source_file": "who_share_checklist.md",
+      "source_rel": "data/rag/knowledge_base/who_share_checklist.md",
+      "kb_file_index": 6,
+      "section_index": 4,
       "chunk_index": 0
     }
   }

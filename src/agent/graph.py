@@ -1,8 +1,10 @@
 """
-LangGraph workflow: normalize → ML → (optional plan_queries + RAG + verify) → report.
+LangGraph workflow: normalize → ML → (optional plan_queries + RAG + verify) → report → validate_report.
 
-Low ML confidence: plan_queries (Groq) → retrieve → verify (Groq) → report (Groq summary).
-High confidence: report only (still uses Groq for narrative when configured).
+Low ML confidence: plan_queries (LLM) → retrieve (FAISS/Chroma; similarity/MMR) → verify (LLM) → report.
+High confidence: report only (still may use an LLM for narrative when configured).
+
+``validate_report`` can trigger **one** additional ``report`` attempt on schema failure.
 """
 
 from __future__ import annotations
@@ -17,6 +19,7 @@ from src.agent.nodes.normalize import run_normalize_node
 from src.agent.nodes.plan_queries import run_plan_queries_node
 from src.agent.nodes.report import run_report_node
 from src.agent.nodes.retrieve import run_retrieve_node
+from src.agent.nodes.validate_report import run_validate_report_node
 from src.agent.nodes.verify import run_verify_node
 from src.agent.state import DEFAULT_LOW_CONFIDENCE_THRESHOLD, AgentState
 
@@ -47,6 +50,10 @@ def build_graph(
     store_dir: Optional[Path] = None,
     confidence_threshold: float = DEFAULT_LOW_CONFIDENCE_THRESHOLD,
     top_k: int = 5,
+    rag_backend: str = "faiss",
+    rag_search_type: str = "similarity",
+    rag_fetch_k: int = 20,
+    rag_lambda_mult: float = 0.6,
 ) -> Any:
     """
     Compile the credibility agent LangGraph.
@@ -72,7 +79,20 @@ def build_graph(
         return run_plan_queries_node(state)
 
     def _retrieve(state: AgentState) -> dict:
-        return run_retrieve_node(state, store_dir=sd, top_k=top_k)
+        # Per-run overrides can be set in state by the UI; graph args are defaults.
+        backend = str(state.get("rag_backend") or rag_backend)
+        search_type = str(state.get("rag_search_type") or rag_search_type)
+        fetch_k = int(state.get("rag_fetch_k") or rag_fetch_k)
+        lam = float(state.get("rag_lambda_mult") or rag_lambda_mult)
+        return run_retrieve_node(
+            state,
+            store_dir=sd,
+            top_k=top_k,
+            backend=backend,
+            search_type=search_type,
+            fetch_k=fetch_k,
+            lambda_mult=lam,
+        )
 
     def _verify(state: AgentState) -> dict:
         return run_verify_node(state)
@@ -80,8 +100,20 @@ def build_graph(
     def _report(state: AgentState) -> dict:
         return run_report_node(state)
 
+    def _validate(state: AgentState) -> dict:
+        return run_validate_report_node(state)
+
     def _router(state: AgentState) -> Literal["plan_queries", "report"]:
         return _route_after_ml(state, threshold=confidence_threshold)
+
+    def _route_after_validate(state: AgentState) -> Literal["end", "retry_report"]:
+        if state.get("validation_passed"):
+            return "end"
+        # Bound retries to 1 additional attempt.
+        attempt = int(state.get("report_attempt") or 0)
+        if attempt >= 1:
+            return "end"
+        return "retry_report"
 
     graph = StateGraph(AgentState)
     graph.add_node("normalize", _normalize)
@@ -90,6 +122,7 @@ def build_graph(
     graph.add_node("retrieve", _retrieve)
     graph.add_node("verify", _verify)
     graph.add_node("report", _report)
+    graph.add_node("validate_report", _validate)
 
     graph.add_edge(START, "normalize")
     graph.add_edge("normalize", "ml_classify")
@@ -101,7 +134,12 @@ def build_graph(
     graph.add_edge("plan_queries", "retrieve")
     graph.add_edge("retrieve", "verify")
     graph.add_edge("verify", "report")
-    graph.add_edge("report", END)
+    graph.add_edge("report", "validate_report")
+    graph.add_conditional_edges(
+        "validate_report",
+        _route_after_validate,
+        {"end": END, "retry_report": "report"},
+    )
 
     return graph.compile()
 
@@ -118,6 +156,10 @@ def iter_credibility_agent(
     store_dir: Optional[Path] = None,
     confidence_threshold: float = DEFAULT_LOW_CONFIDENCE_THRESHOLD,
     top_k: int = 5,
+    rag_backend: str = "faiss",
+    rag_search_type: str = "similarity",
+    rag_fetch_k: int = 20,
+    rag_lambda_mult: float = 0.6,
 ) -> Iterator[Tuple[str, AgentState]]:
     """
     Stream graph execution: after each node, yield ``(node_name, merged_state)``.
@@ -130,8 +172,18 @@ def iter_credibility_agent(
         store_dir=store_dir,
         confidence_threshold=confidence_threshold,
         top_k=top_k,
+        rag_backend=rag_backend,
+        rag_search_type=rag_search_type,
+        rag_fetch_k=rag_fetch_k,
+        rag_lambda_mult=rag_lambda_mult,
     )
-    seed: Dict[str, Any] = {"raw_text": (raw_text or "").strip()}
+    seed: Dict[str, Any] = {
+        "raw_text": (raw_text or "").strip(),
+        "rag_backend": rag_backend,
+        "rag_search_type": rag_search_type,
+        "rag_fetch_k": int(rag_fetch_k),
+        "rag_lambda_mult": float(rag_lambda_mult),
+    }
     merged: Dict[str, Any] = dict(seed)
     for chunk in graph.stream(seed, stream_mode="updates"):
         for node_name, update in chunk.items():
@@ -146,6 +198,10 @@ def invoke_credibility_agent(
     store_dir: Optional[Path] = None,
     confidence_threshold: float = DEFAULT_LOW_CONFIDENCE_THRESHOLD,
     top_k: int = 5,
+    rag_backend: str = "faiss",
+    rag_search_type: str = "similarity",
+    rag_fetch_k: int = 20,
+    rag_lambda_mult: float = 0.6,
 ) -> AgentState:
     """
     Run the full graph from raw user text (convenience for CLI / Streamlit).
@@ -167,6 +223,10 @@ def invoke_credibility_agent(
         store_dir=store_dir,
         confidence_threshold=confidence_threshold,
         top_k=top_k,
+        rag_backend=rag_backend,
+        rag_search_type=rag_search_type,
+        rag_fetch_k=rag_fetch_k,
+        rag_lambda_mult=rag_lambda_mult,
     ):
         last = state
     return last or cast(AgentState, {"raw_text": (raw_text or "").strip()})

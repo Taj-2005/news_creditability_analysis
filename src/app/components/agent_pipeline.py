@@ -8,6 +8,7 @@ does not treat content as fenced code blocks.
 from __future__ import annotations
 
 import html
+import os
 import textwrap
 from typing import Any, Dict, List, Tuple
 
@@ -33,22 +34,27 @@ NODE_META: Dict[str, Tuple[str, str, str]] = {
     "plan_queries": (
         "Plan queries",
         "src/agent/nodes/plan_queries.py",
-        "Groq plans search strings (fallback window if no API key).",
+        "LLM plans RAG search strings (Groq/Gemini); window fallback if no key.",
     ),
     "retrieve": (
         "Retrieve",
         "src/agent/nodes/retrieve.py",
-        "FAISS + MiniLM over local data/rag index.",
+        "MiniLM embed → FAISS or Chroma (similarity or MMR) over data/rag.",
     ),
     "verify": (
         "Verify",
         "src/agent/nodes/verify.py",
-        "Groq compares article to chunks → structured JSON.",
+        "LLM cross-checks article vs retrieved chunks → structured JSON.",
     ),
     "report": (
         "Report",
         "src/agent/nodes/report.py",
-        "Build final_report for the UI (optional Groq summary).",
+        "Assembles final_report (optional LLM narrative on first attempt).",
+    ),
+    "validate_report": (
+        "Validate report",
+        "src/agent/nodes/validate_report.py",
+        "Schema guard on final_report; triggers at most one report retry.",
     ),
 }
 
@@ -81,16 +87,28 @@ def _snippet(node: str, state: Dict[str, Any]) -> str:
     if node == "retrieve":
         ch = state.get("retrieved_chunks") or []
         rag = state.get("rag_error")
+        be = (state.get("rag_backend") or "faiss").strip().lower()
+        st = (state.get("rag_search_type") or "similarity").strip().lower()
         if rag:
             return f"⚠ {str(rag)[:200]}"
-        return f"{len(ch)} passage(s) retrieved from FAISS."
+        return f"{len(ch)} hit(s) · backend {be} · {st}."
     if node == "verify":
         v = state.get("verification") or {}
         mode = v.get("mode", "")
         nrev = int(v.get("chunks_reviewed") or 0)
-        return f"Mode {mode} · reviewed {nrev} chunk(s)."
+        prov = (os.environ.get("LLM_PROVIDER") or "auto").strip().lower() or "auto"
+        return f"Mode {mode} · {nrev} chunk(s) · LLM_PROVIDER={prov}."
     if node == "report":
-        return "Dashboard payload ready (summary, risks, sources, fact checks)."
+        att = int(state.get("report_attempt") or 0)
+        return f"final_report merged · report_attempt={att}."
+    if node == "validate_report":
+        ok = state.get("validation_passed")
+        errs = state.get("validation_errors") or []
+        att = int(state.get("report_attempt") or 0)
+        if ok is True:
+            return f"Schema OK · attempt {att}."
+        msg = "; ".join(str(e) for e in errs[:3]) if errs else "validation failed"
+        return f"Attempt {att} · {msg[:180]}…"
     return "—"
 
 
@@ -218,11 +236,12 @@ def pipeline_styles_css() -> str:
     return textwrap.dedent(
         """
         .da-flow-shell {
-          border-radius: 16px;
-          padding: 1px;
+          border-radius: 14px;
+          padding: 0;
           margin: 0 0 1rem 0;
-          background: linear-gradient(135deg, rgba(59,130,246,0.35), rgba(16,185,129,0.2), rgba(99,102,241,0.15));
-          box-shadow: 0 4px 24px rgba(15,23,42,0.06), 0 1px 3px rgba(15,23,42,0.04);
+          background: #f1f5f9;
+          border: 1px solid #e2e8f0;
+          box-shadow: 0 2px 12px rgba(15,23,42,0.04);
         }
         .da-flow {
           font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
@@ -260,8 +279,7 @@ def pipeline_styles_css() -> str:
         }
         .da-flow-row--active .da-flow-line {
           background: linear-gradient(180deg, #3b82f6, #6366f1);
-          box-shadow: 0 0 12px rgba(59,130,246,0.45);
-          animation: da-line-pulse 1.2s ease-in-out infinite;
+          box-shadow: 0 0 0 1px rgba(59,130,246,0.25);
         }
         .da-flow-row--done .da-flow-line {
           background: linear-gradient(180deg, #6ee7b7, #34d399);
@@ -277,15 +295,7 @@ def pipeline_styles_css() -> str:
           position: relative;
           overflow: hidden;
         }
-        .da-flow-row--active::after {
-          content: "";
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(100deg, transparent 40%, rgba(255,255,255,0.55) 50%, transparent 60%);
-          background-size: 200% 100%;
-          animation: da-shimmer 2s ease-in-out infinite;
-          pointer-events: none;
-        }
+        .da-flow-row--active::after { display: none; }
         .da-flow-badge {
           position: relative;
           z-index: 1;
@@ -327,8 +337,7 @@ def pipeline_styles_css() -> str:
           background: linear-gradient(145deg, #eff6ff, #dbeafe);
           color: #1d4ed8;
           border-color: #93c5fd;
-          box-shadow: 0 0 0 3px rgba(59,130,246,0.18);
-          animation: da-badge-float 1.25s ease-in-out infinite;
+          box-shadow: 0 0 0 2px rgba(59,130,246,0.12);
         }
         .da-flow-body { min-width: 0; position: relative; z-index: 1; }
         .da-flow-title {
@@ -387,32 +396,15 @@ def pipeline_styles_css() -> str:
           flex: 0 0 8px;
           height: 8px;
           border-radius: 50%;
-          background: #94a3b8;
-          animation: da-head-dot 1s ease-in-out infinite;
+          background: #6366f1;
         }
         @keyframes da-row-in {
           from { opacity: 0; transform: translateY(12px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        @keyframes da-shimmer {
-          0% { background-position: 100% 0; }
-          100% { background-position: -100% 0; }
-        }
-        @keyframes da-line-pulse {
-          0%, 100% { opacity: 1; filter: brightness(1); }
-          50% { opacity: 0.85; filter: brightness(1.15); }
-        }
-        @keyframes da-badge-float {
-          0%, 100% { transform: translateY(0) scale(1); }
-          50% { transform: translateY(-2px) scale(1.02); }
-        }
         @keyframes da-check-pop {
           from { transform: scale(0.2); opacity: 0; }
           to { transform: scale(1); opacity: 1; }
-        }
-        @keyframes da-head-dot {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.45; transform: scale(0.85); }
         }
         .da-flow-row--warn .da-flow-line {
           background: linear-gradient(180deg, #fecaca, #fca5a5);
@@ -502,6 +494,50 @@ def deep_analysis_results_css() -> str:
           margin: 0;
           line-height: 1.45;
         }
+        .da-cred {
+          display: flex;
+          flex-direction: column;
+          gap: 0.35rem;
+          padding: 0.75rem 1rem;
+          border-radius: 12px;
+          border: 1px solid #e2e8f0;
+          margin: 0 0 0.25rem 0;
+          font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+          animation: da-fade-in 0.45s ease both;
+          animation-delay: 0.1s;
+        }
+        .da-cred-high {
+          background: linear-gradient(135deg, #ecfdf5, #f0fdf4);
+          border-color: rgba(52, 211, 153, 0.45);
+        }
+        .da-cred-low {
+          background: linear-gradient(135deg, #fffbeb, #fefce8);
+          border-color: rgba(251, 191, 36, 0.5);
+        }
+        .da-cred-label {
+          font-size: 1.25rem;
+          font-weight: 700;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+          color: #0f172a;
+        }
+        .da-cred-high .da-cred-label { color: #047857; }
+        .da-cred-low .da-cred-label { color: #a16207; }
+        .da-cred-hint {
+          font-size: 0.72rem;
+          color: #64748b;
+          line-height: 1.45;
+        }
+        .da-disclaimer {
+          font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+          font-size: 0.78rem;
+          line-height: 1.55;
+          color: #475569;
+          padding: 0.65rem 0.85rem;
+          border-radius: 10px;
+          background: #f8fafc;
+          border: 1px dashed #cbd5e1;
+        }
         .da-section {
           font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
           font-size: 0.65rem;
@@ -577,7 +613,7 @@ def deep_analysis_results_css() -> str:
         .da-fact-tag-contradicted { background: #fef2f2; color: #b91c1c; }
         .da-fact-tag-unknown { background: #f8fafc; color: #64748b; }
         @media (prefers-reduced-motion: reduce) {
-          .da-verdict-card, .da-body, .da-source-card {
+          .da-verdict-card, .da-body, .da-source-card, .da-cred {
             animation: none !important;
             transition: none !important;
           }

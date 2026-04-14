@@ -4,3 +4,6 @@ __pycache__/
 .env
 .venv
 .cache/
+/customer-churn-prediction
+/docs/Milestone 2 Presentation Script.docx
+/docs/Milestone_2_Presentation_Script.md

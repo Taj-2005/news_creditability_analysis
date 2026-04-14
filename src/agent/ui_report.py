@@ -1,9 +1,10 @@
 """
 Build UI-facing ``final_report`` objects from ML + verification state.
 
-Output shape (exact keys for dashboards):
+Output shape (keys for dashboards and rubric alignment):
 
-    summary, risk_factors, fact_checks, verdict, confidence
+    summary, risk_factors, fact_checks, verdict, confidence, sources,
+    credibility_score (High | Low), pattern_detection_summary, disclaimer
 """
 
 from __future__ import annotations
@@ -143,6 +144,68 @@ def _deterministic_summary(
     return "\n\n".join(parts)
 
 
+_REPORT_DISCLAIMER = (
+    "This assessment uses automated machine learning and optional LLM-assisted retrieval "
+    "over a project-managed text index. It is not professional fact-checking. "
+    "Always verify important claims with independent trusted sources."
+)
+
+
+def _credibility_score_high_low(
+    ml_label: Optional[int],
+    conf_f: Optional[float],
+    verification: Dict[str, Any],
+    pipeline_error: Optional[str],
+) -> str:
+    """
+    Binary rubric-style score for *article credibility trust* (not classifier accuracy).
+
+    **Low** — fake label, missing/weak confidence, strong evidence tension, or pipeline error.
+    **High** — real label with sufficient confidence and limited contradiction vs retrieval.
+    """
+    if pipeline_error:
+        return "Low"
+    if ml_label is None:
+        return "Low"
+    if int(ml_label) == 0:
+        return "Low"
+    if conf_f is None or float(conf_f) < _MED:
+        return "Low"
+    contrad = [str(x).strip() for x in (verification.get("contradicted") or []) if str(x).strip()]
+    if len(contrad) >= 2:
+        return "Low"
+    return "High"
+
+
+def _pattern_detection_summary(
+    state: Dict[str, Any],
+    verification: Dict[str, Any],
+    verdict: str,
+    rag_had_passages: bool,
+) -> str:
+    """Single paragraph summarising ML signal, verification buckets, and retrieval usage."""
+    sup = [str(x).strip() for x in (verification.get("supported") or []) if str(x).strip()]
+    con = [str(x).strip() for x in (verification.get("contradicted") or []) if str(x).strip()]
+    unk = [str(x).strip() for x in (verification.get("unknown") or []) if str(x).strip()]
+    mode = str(verification.get("mode") or "n/a")
+    raw_conf = state.get("ml_confidence")
+    band = _confidence_band(float(raw_conf)) if isinstance(raw_conf, (int, float)) else "Unavailable"
+    chunks = state.get("retrieved_chunks") or []
+    n_chunks = len(chunks)
+    lead = (
+        f"Classifier pattern: verdict {verdict}; confidence tier {band}. "
+        f"Evidence alignment scan: {len(sup)} supported, {len(con)} tension, {len(unk)} unclear "
+        f"(verification mode: {mode}). "
+    )
+    if rag_had_passages:
+        lead += f"Retrieval engaged {n_chunks} passages vs the article."
+    else:
+        lead += "Retrieval not applied to this run (shortcut, empty index, or upstream skip)."
+    if state.get("rag_error"):
+        lead += f" Retrieval flag: {str(state['rag_error'])[:160]}"
+    return lead
+
+
 def build_ui_final_report(
     state: Dict[str, Any],
     *,
@@ -156,8 +219,9 @@ def build_ui_final_report(
         use_llm_summary: If True, try Groq for ``summary``; else deterministic only.
 
     Returns:
-        Dict with keys ``summary``, ``risk_factors``, ``fact_checks``, ``verdict``,
-        ``confidence``, and ``sources`` (RAG snippets for UI citations).
+        Dict including ``summary``, ``risk_factors``, ``fact_checks``, ``verdict``,
+        ``confidence``, ``sources``, ``credibility_score`` (``High`` | ``Low``),
+        ``pattern_detection_summary``, and ``disclaimer``.
     """
     ml_label = state.get("ml_label")
     verdict = _ml_verdict_label(ml_label)
@@ -227,6 +291,14 @@ def build_ui_final_report(
             }
         )
 
+    cred = _credibility_score_high_low(
+        int(ml_label) if ml_label is not None else None,
+        conf_f,
+        verification,
+        state.get("error"),
+    )
+    pattern = _pattern_detection_summary(state, verification, verdict, rag_had_passages)
+
     return {
         "summary": summary,
         "risk_factors": risk_factors,
@@ -234,4 +306,7 @@ def build_ui_final_report(
         "verdict": verdict,
         "confidence": confidence,
         "sources": sources,
+        "credibility_score": cred,
+        "pattern_detection_summary": pattern,
+        "disclaimer": _REPORT_DISCLAIMER,
     }

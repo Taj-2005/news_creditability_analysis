@@ -45,6 +45,8 @@ def architecture_pipeline_css() -> str:
         .arch-node--out{border-left:4px solid #ea580c;}
         .arch-node--out .arch-node-k{color:#ea580c;}
         .arch-node--neutral{border-left:4px solid #64748b;}
+        .arch-node--val{border-left:4px solid #d97706;}
+        .arch-node--val .arch-node-k{color:#d97706;}
         .arch-node--router{text-align:center;max-width:340px;padding:12px 16px;border-radius:999px;background:#f1f5f9;border:1px dashed #94a3b8;font-weight:600;font-size:12px;color:#334155;}
         .arch-node--dim .arch-node-glow{opacity:0!important;}
         .arch-split{display:flex;width:100%;max-width:640px;gap:20px;margin:8px auto 0;align-items:stretch;justify-content:center;flex-wrap:wrap;}
@@ -71,7 +73,7 @@ def _n(
     subtitle: str,
     extra: str = "",
 ) -> str:
-    """One pipeline card; ``cat`` is ml|rag|llm|out|neutral."""
+    """One pipeline card; ``cat`` is ml|rag|llm|val|out|neutral."""
     t_esc = html.escape(title)
     s_esc = html.escape(subtitle)
     base = f"arch-node arch-node--{cat}"
@@ -93,6 +95,8 @@ def _n(
         k = "RAG"
     elif cat == "llm":
         k = "LLM"
+    elif cat == "val":
+        k = "CHK"
     elif cat == "out":
         k = "OUT"
     return "".join(
@@ -116,7 +120,8 @@ def _router() -> str:
         '<div class="arch-col">'
         '<div class="arch-conn"></div>'
         '<div class="arch-node arch-node--router arch-core-path">'
-        "ml_confidence &lt; threshold → plan → RAG → verify → report · else → report"
+        "ml_confidence &lt; threshold → full lane (plan → RAG → verify) → report → validate · "
+        "else → report → validate (skips RAG)"
         "</div>"
         '<div class="arch-conn"></div>'
         "</div>"
@@ -169,43 +174,43 @@ def build_pipeline_markup(mode: ModeKey) -> str:
         _router(),
         '<div class="arch-split">',
         '<div class="arch-branch">',
-        '<div class="arch-branch-cap">Direct to report (high ML confidence)</div>',
+        '<div class="arch-branch-cap">Higher ML confidence · report without RAG</div>',
         _c(),
         _n(
             cat="out",
-            title="Report (high-confidence lane)",
-            subtitle="report.py · skips retrieve/verify when graph routes here · Groq/HF optional",
+            title="Structured report",
+            subtitle="report.py + ui_report.py · skips plan/retrieve/verify on this lane · LLM optional for narrative",
             extra="short_hi" if mode == "ml_only" else "short",
         ),
         "</div>",
         '<div class="arch-branch">',
-        '<div class="arch-branch-cap">Agent + RAG + LLM lane</div>',
+        '<div class="arch-branch-cap">Lower confidence · plan → retrieve → verify</div>',
         _c(),
         _n(
             cat="llm",
             title="Query generation",
-            subtitle="plan_queries.py · Groq plans search strings (fallback window if no key)",
+            subtitle="plan_queries.py · LLM search strings (Groq/Gemini) · text-window fallback if no key",
             extra="agent_hi" if mode == "agent" else "agent",
         ),
         _c(),
         _n(
             cat="rag",
             title="RAG retrieval",
-            subtitle="retrieve.py · FAISS + MiniLM · data/rag/ · top-k passages",
+            subtitle="retrieve.py · FAISS or Chroma · similarity or MMR · configured on Deep Analysis",
             extra="agent_hi" if mode == "agent" else "agent",
         ),
         _c(),
         _n(
             cat="llm",
             title="LLM reasoning & verification",
-            subtitle="verify.py · Groq JSON (supported / contradicted / unknown) vs retrieved text",
+            subtitle="verify.py · evidence JSON vs chunks (Gemini → Groq fallback when both keys exist)",
             extra="agent_hi" if mode == "agent" else "agent",
         ),
         _c(),
         _n(
             cat="out",
             title="Structured report",
-            subtitle="report.py + ui_report.py · summary, risks, sources, fact checks",
+            subtitle="report.py + ui_report.py · merges ML, verification, and RAG context",
             extra="agent_hi" if mode == "agent" else "agent",
         ),
         "</div>",
@@ -213,14 +218,24 @@ def build_pipeline_markup(mode: ModeKey) -> str:
         _c(),
         '<div class="arch-col">',
         _n(
-            cat="out",
-            title="Final output",
-            subtitle="Verdict, probabilities, UI payload · Live Prediction uses ML slice only",
+            cat="val",
+            title="Validate report",
+            subtitle="validate_report.py · schema checks · at most one retry of report",
             extra="core",
         ),
         "</div>",
-        '<p class="arch-pipe-foot">LangGraph: normalize → ml_classify → conditional → report. '
-        "Deep Analysis in the app can force the full RAG path via a high confidence threshold.</p>",
+        _c(),
+        '<div class="arch-col">',
+        _n(
+            cat="out",
+            title="Final output",
+            subtitle="final_report → UI · Live Prediction Lab = ML-only shortcut (no LangGraph)",
+            extra="core",
+        ),
+        "</div>",
+        '<p class="arch-pipe-foot">LangGraph (Deep Analysis): normalize → ml_classify → branch → … → report → validate_report → end. '
+        "This page’s toggle only changes <strong>emphasis</strong> (ML-only story vs full agent). "
+        "RAG backend + MMR + LLM provider are set under <strong>Deep Analysis → Agent runtime</strong>.</p>",
         "</div>",
     ]
     return "".join(parts)
@@ -229,6 +244,7 @@ def build_pipeline_markup(mode: ModeKey) -> str:
 def render_architecture_toggle_caption() -> str:
     """Markdown caption below the path selector."""
     return (
-        "**ML fast path** — Live Prediction: same preprocessing + classifier, verdict only. "
-        "**Full agent** — Deep Analysis: LangGraph stream with RAG + Groq/HF where configured."
+        "**ML fast path** — **Live Prediction Lab**: `clean_text` + loaded `pipeline.pkl` → Fake/Real probabilities (no LangGraph). "
+        "**Full agent** — **Deep Analysis**: streamed LangGraph (`iter_credibility_agent`): plan → retrieve (FAISS/Chroma, similarity/MMR) → "
+        "verify → report → **validate_report** (bounded retry). Pick RAG + LLM settings on the Deep Analysis page."
     )

@@ -1,10 +1,11 @@
 """
-Deep Analysis — LangGraph agent (ML + RAG + Groq) with a minimal results layout.
+Deep Analysis — LangGraph agent (ML + RAG + LLM) with live node timeline and structured report.
 """
 
 from __future__ import annotations
 
 import logging
+import os
 import textwrap
 
 import streamlit as st
@@ -17,6 +18,7 @@ from src.app.components.agent_pipeline import (
 from src.app.components.ui import page_header
 from src.app.core import EXAMPLE_TEXTS, validate_input
 from src.agent.graph import iter_credibility_agent
+from src.agent.feedback import record_feedback
 
 logger = logging.getLogger("news_credibility_app")
 
@@ -51,15 +53,80 @@ def render():
 
     page_header(
         "Deep analysis",
-        "Runs the full pipeline on this page: normalize → ML → query planning → "
-        "retrieval → verification → report (not the “high-confidence shortcut”). "
-        "Groq improves query planning and verification when `GROQ_API_KEY` is set; "
-        "build `data/rag/` for non-empty sources.",
+        "Streams **LangGraph** on this page: normalize → ML → (plan → retrieve → verify) → report → "
+        "**validate_report**. The UI forces the low-confidence branch so plan/retrieve/verify always run. "
+        "Configure **FAISS vs Chroma**, **similarity vs MMR**, and **LLM provider** below. "
+        "Gemini falls back to Groq on errors when `GROQ_API_KEY` is set. Build `data/rag/` for non-empty RAG hits.",
     )
+
+    st.warning(
+        "**Disclaimer — misinformation & ethics:** This page uses statistical models and "
+        "optional LLMs over a **fixed, project-sized** text index. Outputs are **not** legal, "
+        "medical, or journalistic advice and **cannot** replace professional fact-checkers or "
+        "primary sources. **Do not** treat “High” credibility as proof an article is true; "
+        "use it only as a triage signal. Verify consequential claims yourself.",
+        icon="⚠️",
+    )
+
+    st.session_state.setdefault("rag_backend", "faiss")
+    st.session_state.setdefault("rag_search_type", "similarity")
+    st.session_state.setdefault("rag_fetch_k", 20)
+    st.session_state.setdefault("rag_lambda_mult", 0.6)
+    st.session_state.setdefault("llm_provider", "auto")
+
+    with st.expander("Agent runtime — RAG & LLM (this tab)", expanded=True):
+        st.caption(
+            "These settings apply only to **Deep Analysis** runs. Default RAG is **FAISS** + **similarity**; "
+            "Chroma requires `data/rag/chroma_store/` from `scripts/build_chroma_store.py`."
+        )
+        r1, r2 = st.columns(2)
+        with r1:
+            st.session_state["rag_backend"] = st.selectbox(
+                "RAG backend",
+                ["faiss", "chroma"],
+                index=0 if st.session_state["rag_backend"] == "faiss" else 1,
+                help="FAISS: data/rag/faiss.index + chunks.json. Chroma: data/rag/chroma_store/.",
+            )
+            st.session_state["rag_search_type"] = st.selectbox(
+                "Retrieval mode",
+                ["similarity", "mmr"],
+                index=0 if st.session_state["rag_search_type"] == "similarity" else 1,
+                help="MMR diversifies passages (tune fetch pool and λ below).",
+            )
+        with r2:
+            _lp_opts = ["auto", "groq", "gemini"]
+            _lp_cur = str(st.session_state.get("llm_provider") or "auto").strip().lower()
+            _lp_idx = _lp_opts.index(_lp_cur) if _lp_cur in _lp_opts else 0
+            st.session_state["llm_provider"] = st.selectbox(
+                "LLM provider",
+                _lp_opts,
+                index=_lp_idx,
+                help="auto: use secrets/env. gemini: try Gemini, then Groq if Gemini fails and Groq key exists.",
+            )
+        if st.session_state["rag_search_type"] == "mmr":
+            st.session_state["rag_fetch_k"] = int(
+                st.slider(
+                    "MMR fetch_k",
+                    min_value=8,
+                    max_value=60,
+                    value=int(st.session_state["rag_fetch_k"]),
+                    step=2,
+                )
+            )
+            st.session_state["rag_lambda_mult"] = float(
+                st.slider(
+                    "MMR λ (relevance vs diversity)",
+                    min_value=0.0,
+                    max_value=1.0,
+                    value=float(st.session_state["rag_lambda_mult"]),
+                    step=0.05,
+                )
+            )
 
     st.markdown('<div class="da-wrap">', unsafe_allow_html=True)
     st.markdown(
-        '<p class="da-input-hint">Paste or load a sample, then run. The live pipeline shows each LangGraph node as it executes.</p>',
+        '<p class="da-input-hint">Paste or load a sample, then run. The timeline lists each LangGraph node in order '
+        "(including <strong>validate_report</strong>); the highlighted row is the step currently executing.</p>",
         unsafe_allow_html=True,
     )
 
@@ -90,6 +157,13 @@ def render():
     run = st.button("Run deep analysis", type="primary", use_container_width=False)
 
     if run:
+        # Apply Agent runtime (this tab) selections for this run.
+        prov = str(st.session_state.get("llm_provider") or "auto").strip().lower()
+        if prov == "auto":
+            # Let Streamlit secrets / process env control defaults without forcing a value.
+            os.environ.pop("LLM_PROVIDER", None)
+        elif prov in ("groq", "gemini"):
+            os.environ["LLM_PROVIDER"] = prov
         ok, err = validate_input(text)
         if not ok:
             st.warning(err)
@@ -97,7 +171,8 @@ def render():
             try:
                 events: list[tuple[str, dict]] = []
                 caption = (
-                    "Live LangGraph run: each row is one graph node and the source file that executed it."
+                    "Live LangGraph stream: each row is one node (normalize → … → validate_report). "
+                    "Snippets show RAG backend/mode and LLM_PROVIDER for this run."
                 )
 
                 def _tick(node_name: str, merged: dict) -> None:
@@ -116,6 +191,10 @@ def render():
                         for node_name, merged in iter_credibility_agent(
                             text.strip(),
                             confidence_threshold=_DEEP_ANALYSIS_ALWAYS_RAG_THRESHOLD,
+                            rag_backend=str(st.session_state.get("rag_backend") or "faiss"),
+                            rag_search_type=str(st.session_state.get("rag_search_type") or "similarity"),
+                            rag_fetch_k=int(st.session_state.get("rag_fetch_k") or 20),
+                            rag_lambda_mult=float(st.session_state.get("rag_lambda_mult") or 0.6),
                         ):
                             _tick(node_name, merged)
                         if events:
@@ -134,6 +213,10 @@ def render():
                     for node_name, merged in iter_credibility_agent(
                         text.strip(),
                         confidence_threshold=_DEEP_ANALYSIS_ALWAYS_RAG_THRESHOLD,
+                        rag_backend=str(st.session_state.get("rag_backend") or "faiss"),
+                        rag_search_type=str(st.session_state.get("rag_search_type") or "similarity"),
+                        rag_fetch_k=int(st.session_state.get("rag_fetch_k") or 20),
+                        rag_lambda_mult=float(st.session_state.get("rag_lambda_mult") or 0.6),
                     ):
                         _tick(node_name, merged)
                     if events:
@@ -172,6 +255,9 @@ def render():
     summary = fr.get("summary") or ""
     risks = fr.get("risk_factors") or []
     sources = fr.get("sources") or []
+    cred = fr.get("credibility_score") or "Low"
+    pattern = fr.get("pattern_detection_summary") or ""
+    disc = fr.get("disclaimer") or ""
 
     # Verdict + confidence (card + semantic tint)
     v_lower = verdict.lower()
@@ -185,6 +271,30 @@ def render():
         f'<p class="da-sub">{conf_e}</p></div>',
         unsafe_allow_html=True,
     )
+
+    cred_slug = "high" if str(cred).lower() == "high" else "low"
+    cred_e = _escape_html(str(cred))
+    st.markdown(
+        f'<p class="da-section">Credibility score (rubric)</p>'
+        f'<div class="da-cred da-cred-{cred_slug}">'
+        f'<span class="da-cred-label">{cred_e}</span>'
+        f'<span class="da-cred-hint">High = stronger trust signal from ML + evidence scan; '
+        f"Low = fake label, weak confidence, evidence tension, or pipeline issue.</span>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown('<p class="da-section">Pattern detection summary</p>', unsafe_allow_html=True)
+    if pattern:
+        st.markdown(
+            f'<div class="da-body">{_escape_html(pattern).replace(chr(10), "<br/>")}</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            '<div class="da-body" style="color:#94a3b8;">No pattern summary available.</div>',
+            unsafe_allow_html=True,
+        )
 
     st.markdown('<p class="da-section">Summary</p>', unsafe_allow_html=True)
     st.markdown(f'<div class="da-body">{_escape_html(summary).replace(chr(10), "<br/>")}</div>', unsafe_allow_html=True)
@@ -222,7 +332,7 @@ def render():
         if not rows:
             st.caption(
                 "No rows yet. After retrieval runs, this lists supported / contradicted / "
-                "unknown items (Groq verification when an API key is set)."
+                "unknown items (LLM verification when API keys are set — Groq and/or Gemini)."
             )
         for row in rows:
             status = (row.get("status") or "unknown").lower()
@@ -236,6 +346,36 @@ def render():
                 f"<span>{finding}</span></div>",
                 unsafe_allow_html=True,
             )
+
+    with st.expander("Feedback (optional)", expanded=False):
+        st.caption("Rate the usefulness of this report. Stored locally in `data/feedback/feedback.jsonl`.")
+        rating = st.select_slider("Rating", options=[1, 2, 3, 4, 5], value=4)
+        notes = st.text_area("Notes (optional)", height=90, placeholder="What was good / missing?")
+        if st.button("Submit feedback"):
+            try:
+                p = record_feedback(
+                    raw_text=text or "",
+                    verdict=str(verdict),
+                    credibility_score=str(cred),
+                    rating=int(rating),
+                    notes=str(notes or ""),
+                    metadata={
+                        "page": "deep_analysis",
+                        "rag_backend": str(st.session_state.get("rag_backend") or ""),
+                        "rag_search_type": str(st.session_state.get("rag_search_type") or ""),
+                        "llm_provider": str(st.session_state.get("llm_provider") or ""),
+                    },
+                )
+                st.success(f"Saved feedback to {p}")
+            except Exception as exc:
+                st.error(f"Feedback save failed: {exc}")
+
+    if disc:
+        st.markdown('<p class="da-section">Structured report disclaimer</p>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="da-disclaimer">{_escape_html(disc)}</div>',
+            unsafe_allow_html=True,
+        )
 
     st.markdown("</div>", unsafe_allow_html=True)
 

@@ -8,13 +8,17 @@ Usage (from repo root):
 Outputs under data/rag/:
   faiss.index, chunks.json
 
-Uses a tiny in-repo sample corpus (mock-style news snippets); safe to run offline
-after ``pip install -r requirements.txt``.
+Builds from a small local markdown knowledge base under ``data/rag/knowledge_base``.
+If that folder is missing or empty, falls back to a tiny in-repo sample corpus.
+
+Safe to run offline after ``pip install -r requirements.txt`` (first run may
+download MiniLM into ``.cache/huggingface``).
 """
 
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -25,6 +29,9 @@ if str(REPO_ROOT) not in sys.path:
 
 from src.rag.embeddings import EmbeddingModel
 from src.rag.store import RAGStore
+
+# --- Knowledge base: markdown docs under data/rag/knowledge_base ---
+KB_DIR = REPO_ROOT / "data" / "rag" / "knowledge_base"
 
 # --- Sample corpus (short, self-contained; not from Kaggle to keep repo tiny) ---
 SAMPLE_DOCUMENTS: List[str] = [
@@ -103,16 +110,101 @@ def build_chunks(
     return texts, metas
 
 
+def _read_markdown_knowledge_base() -> Tuple[List[str], List[Dict[str, object]]]:
+    """
+    Load markdown files from ``data/rag/knowledge_base`` and convert them into chunks.
+
+    Chunking is lightweight and dependency-free (no LangChain):
+    - remove obvious code fences
+    - split on headings and paragraph breaks
+    - window into ~420 chars with overlap
+    """
+    if not KB_DIR.is_dir():
+        return [], []
+
+    md_files = sorted([p for p in KB_DIR.rglob("*.md") if p.is_file()])
+    if not md_files:
+        return [], []
+
+    texts: List[str] = []
+    metas: List[Dict[str, object]] = []
+
+    def _clean_md(raw: str) -> str:
+        s = raw.replace("\r\n", "\n")
+        # Drop fenced code blocks to avoid embedding lots of code.
+        s = re.sub(r"```[\s\S]*?```", " ", s, flags=re.MULTILINE)
+        s = re.sub(r"\n{3,}", "\n\n", s)
+        return s.strip()
+
+    for file_i, path in enumerate(md_files):
+        # Skip meta-doc that describes the folder; we want only content knowledge.
+        if path.name.lower() == "readme.md":
+            continue
+        raw = path.read_text(encoding="utf-8", errors="ignore")
+        cleaned = _clean_md(raw)
+        if not cleaned:
+            continue
+
+        # Split on headings and blank lines; keep short sections.
+        parts: List[str] = []
+        buf: List[str] = []
+        for line in cleaned.splitlines():
+            is_heading = line.lstrip().startswith("#")
+            if is_heading and buf:
+                parts.append("\n".join(buf).strip())
+                buf = [line]
+            else:
+                buf.append(line)
+        if buf:
+            parts.append("\n".join(buf).strip())
+
+        section_i = 0
+        for part in parts:
+            # Further split by paragraph breaks
+            paras = [p.strip() for p in part.split("\n\n") if p.strip()]
+            for para in paras:
+                for chunk_i, chunk in enumerate(chunk_text(para, max_chars=420, overlap=80)):
+                    t = " ".join(chunk.split())
+                    if not t:
+                        continue
+                    # Drop tiny fragments (often headings / bullet tokens) to improve retrieval quality.
+                    if len(t) < 80:
+                        continue
+                    texts.append(t)
+                    metas.append(
+                        {
+                            "source_file": path.name,
+                            "source_rel": str(path.relative_to(REPO_ROOT)),
+                            "kb_file_index": file_i,
+                            "section_index": section_i,
+                            "chunk_index": chunk_i,
+                        }
+                    )
+                section_i += 1
+
+    return texts, metas
+
+
 def main() -> int:
     out_dir = REPO_ROOT / "data" / "rag"
     print(f"Building RAG index → {out_dir}")
 
-    chunk_texts, metadatas = build_chunks(SAMPLE_DOCUMENTS)
+    chunk_texts, metadatas = _read_markdown_knowledge_base()
+    if chunk_texts:
+        print(f"Knowledge base: {KB_DIR} ({len(chunk_texts)} chunks)")
+    else:
+        print("Knowledge base missing/empty; using SAMPLE_DOCUMENTS fallback.")
+        chunk_texts, metadatas = build_chunks(SAMPLE_DOCUMENTS)
     if not chunk_texts:
         print("No chunks produced.", file=sys.stderr)
         return 1
 
-    print(f"Chunks: {len(chunk_texts)} (from {len(SAMPLE_DOCUMENTS)} sample docs)")
+    if metadatas and isinstance(metadatas[0], dict) and "source_file" in metadatas[0]:
+        uniq = sorted({str(m.get("source_file")) for m in metadatas if isinstance(m, dict) and m.get("source_file")})
+        print(f"Sources: {len(uniq)} markdown files")
+    else:
+        print(f"Sources: {len(SAMPLE_DOCUMENTS)} sample docs")
+    print(f"Chunks: {len(chunk_texts)}")
 
     model = EmbeddingModel()
     embeddings = model.encode(chunk_texts, batch_size=16, show_progress_bar=False)

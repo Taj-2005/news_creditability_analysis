@@ -1,8 +1,11 @@
 """Overview — Executive summary, big KPI cards, product pitch. Production-grade layout."""
 
+import html
+
 import streamlit as st
 
 from src.app.components.ui import page_header
+from src.app.nav_config import SIDEBAR_PAGE_DESCRIPTIONS, SIDEBAR_PAGE_ORDER
 from src.app.core import (
     DATASET_NAME,
     get_dataset_size_str,
@@ -289,6 +292,39 @@ def _inject_styles():
             line-height: 1.6;
         }
 
+        /* ── App map (matches left sidebar tabs) ── */
+        .nav-map {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 4px 0 8px 0;
+            background: #ffffff;
+        }
+        .nav-map-row {
+            display: grid;
+            grid-template-columns: minmax(168px, 220px) 1fr;
+            gap: 16px;
+            padding: 12px 18px;
+            border-bottom: 1px solid #f1f5f9;
+            align-items: start;
+            font-family: 'DM Mono', monospace;
+            font-size: 12px;
+        }
+        .nav-map-row:last-child { border-bottom: none; }
+        .nav-map-title {
+            font-weight: 600;
+            color: #0f172a;
+            letter-spacing: -0.01em;
+        }
+        .nav-map-desc {
+            color: #64748b;
+            font-weight: 300;
+            line-height: 1.55;
+        }
+        @media (max-width: 640px) {
+            .nav-map-row { grid-template-columns: 1fr; gap: 6px; }
+        }
+
         h1, h2, h3 { font-family: 'Fraunces', serif !important; font-weight: 300 !important; }
         </style>
         """,
@@ -300,28 +336,33 @@ def render():
     _inject_styles()
     page_header(
         "News Credibility Analyzer",
-        "This system detects whether a news article is Fake or Real using machine learning."
+        "Project 11 — AI/ML: TF-IDF classifier + LangGraph agent, RAG (FAISS/Chroma + MMR), and LLM reasoning (Groq / Gemini / Hugging Face).",
     )
 
     # ── Section 1: What it does ──
-    st.markdown('<p class="ov-eyebrow">01 / Problem</p>', unsafe_allow_html=True)
+    st.markdown('<p class="ov-eyebrow">01 / What it does</p>', unsafe_allow_html=True)
     st.markdown('<h2 class="ov-heading">What it does</h2>', unsafe_allow_html=True)
 
     st.markdown(
         """
         <div class="problem-block">
             Misinformation spreads faster than manual fact-checking can scale.
-            This app provides <strong>automated binary classification</strong> of news as
-            <strong>Fake</strong> or <strong>Real</strong>, using a reproducible ML pipeline —
-            interpretable models, no LLMs, no GPU required.
+            This app combines <strong>classical ML</strong> (TF-IDF + best-by-F1 classifier) with an optional
+            <strong>agentic stack</strong>: <strong>LangGraph</strong> orchestration, <strong>RAG</strong> over a
+            <strong>FAISS</strong> or optional <strong>Chroma</strong> store (MiniLM embeddings; <strong>similarity</strong> or <strong>MMR</strong>),
+            and <strong>LLM</strong> steps for query planning,
+            evidence-aware verification, and narrative reporting (<strong>Groq</strong>; optional <strong>Gemini</strong>; optional <strong>Hugging Face</strong>).
+            <strong>No GPU</strong> is required for training or for the bundled demo index.
         </div>
         <div class="info-notice">
             <span class="notice-icon">◎</span>
-            <span>Trained on the
+            <span><strong>Live Prediction Lab</strong> = fast ML verdict only.
+            <strong>Deep Analysis</strong> = full agent path (RAG + LLM when configured).
+            Formal scope: <code>docs/Project_11_AI_ML.pdf</code> in the repo.
+            Trained on the
             <a href="https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset" target="_blank">
             Kaggle Fake and Real News Dataset</a>.
-            For best results, use <strong>US-based English articles</strong> matching the training distribution
-            in style and topic.</span>
+            Use <strong>US-based English articles</strong> close to the training distribution for fairest scores.</span>
         </div>
         """,
         unsafe_allow_html=True,
@@ -329,7 +370,31 @@ def render():
 
     st.markdown('<hr class="ov-rule">', unsafe_allow_html=True)
 
-    # ── Section 2: KPI metrics ──
+    # ── Section 2: Same labels as left sidebar ──
+    st.markdown('<p class="ov-eyebrow">02 / App map</p>', unsafe_allow_html=True)
+    st.markdown(
+        '<h2 class="ov-heading">What each tab does</h2>',
+        unsafe_allow_html=True,
+    )
+    st.caption(
+        "Matches the **Navigate** list in the left sidebar — use it as a quick orientation. "
+        "**Deep Analysis** has **Agent runtime** controls (RAG backend, retrieval mode, LLM provider) on that page. "
+        "The **highlighted** row in the bar is your current page (blue accent)."
+    )
+    rows = []
+    for title in SIDEBAR_PAGE_ORDER:
+        desc = SIDEBAR_PAGE_DESCRIPTIONS[title]
+        rows.append(
+            '<div class="nav-map-row">'
+            f'<span class="nav-map-title">{html.escape(title)}</span>'
+            f'<span class="nav-map-desc">{html.escape(desc)}</span>'
+            "</div>"
+        )
+    st.markdown('<div class="nav-map">' + "".join(rows) + "</div>", unsafe_allow_html=True)
+
+    st.markdown('<hr class="ov-rule">', unsafe_allow_html=True)
+
+    # ── Section 3: KPI metrics ──
     metrics = get_expected_metrics()
     if not metrics:
         st.markdown(
@@ -363,7 +428,7 @@ def render():
                 cv_sub = f"± {float(m['CV F1'][1]):.2%} std"
                 break
 
-    st.markdown('<p class="ov-eyebrow">02 / Performance</p>', unsafe_allow_html=True)
+    st.markdown('<p class="ov-eyebrow">03 / Performance</p>', unsafe_allow_html=True)
     st.markdown('<h2 class="ov-heading">Key performance metrics</h2>', unsafe_allow_html=True)
 
     st.markdown(
@@ -420,8 +485,8 @@ def render():
 
     st.markdown('<hr class="ov-rule">', unsafe_allow_html=True)
 
-    # ── Section 3: Dataset summary ──
-    st.markdown('<p class="ov-eyebrow">03 / Data</p>', unsafe_allow_html=True)
+    # ── Section 4: Dataset summary ──
+    st.markdown('<p class="ov-eyebrow">04 / Data</p>', unsafe_allow_html=True)
     st.markdown('<h2 class="ov-heading">Dataset summary</h2>', unsafe_allow_html=True)
 
     st.markdown(
@@ -451,24 +516,24 @@ def render():
 
     st.markdown('<hr class="ov-rule">', unsafe_allow_html=True)
 
-    # ── Section 4: Product pitch ──
-    st.markdown('<p class="ov-eyebrow">04 / Pipeline</p>', unsafe_allow_html=True)
+    # ── Section 5: Product pitch ──
+    st.markdown('<p class="ov-eyebrow">05 / Pipeline</p>', unsafe_allow_html=True)
     st.markdown('<h2 class="ov-heading">End-to-end pipeline</h2>', unsafe_allow_html=True)
 
     st.markdown(
         """
         <div class="pipeline-steps">
-          <span class="pipeline-step">Raw Text</span>
+          <span class="pipeline-step">Kaggle data</span>
           <span class="pipeline-arrow">→</span>
-          <span class="pipeline-step">TF-IDF</span>
+          <span class="pipeline-step">TF-IDF + ML</span>
           <span class="pipeline-arrow">→</span>
-          <span class="pipeline-step">LR / NB / RF / SVM</span>
+          <span class="pipeline-step">LangGraph</span>
           <span class="pipeline-arrow">→</span>
-          <span class="pipeline-step">Evaluation</span>
+          <span class="pipeline-step">RAG FAISS</span>
           <span class="pipeline-arrow">→</span>
-          <span class="pipeline-step">Streamlit App</span>
+          <span class="pipeline-step">Groq / HF</span>
           <span class="pipeline-arrow">→</span>
-          <span class="pipeline-step dark">Live Verdict</span>
+          <span class="pipeline-step dark">Streamlit UI</span>
         </div>
         """,
         unsafe_allow_html=True,
@@ -479,12 +544,10 @@ def render():
         <div class="pitch-card">
           <div class="pitch-card-label">Product pitch</div>
           <div class="pitch-card-body">
-            <strong>Problem → Data → Model → Evaluation → Deployment → Live Testing.</strong><br><br>
-            This milestone delivers an end-to-end pipeline: from raw text to a credibility verdict,
-            with stratified splits, class balancing, and four compared models —
-            <strong>Logistic Regression</strong>, <strong>Naive Bayes</strong>,
-            <strong>Random Forest</strong>, and <strong>SVM</strong> — surfaced through
-            a Streamlit app suitable for demos and further agentic AI integration.
+            <strong>Milestone 1</strong>: train &amp; compare <strong>LR · NB · RF · SVM</strong>, pick best F1, ship <code>pipeline.pkl</code>.
+            <strong>Milestone 2</strong>: same ML as the graph’s classify node, then optional <strong>plan → retrieve → verify → report</strong>
+            with RAG + LLM — all visible on <strong>Architecture</strong>, runnable on <strong>Deep Analysis</strong>.
+            Deployed Streamlit demo for coursework demos and viva walkthroughs.
           </div>
         </div>
         """,

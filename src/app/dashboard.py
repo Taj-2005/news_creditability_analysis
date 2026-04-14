@@ -15,6 +15,7 @@ import streamlit as st
 from src.config.env_bootstrap import bootstrap_runtime_env
 from src.app.components.styles import inject_app_css
 from src.app.core import get_model_algorithm_display, PAGE_TITLE
+from src.app.nav_config import SIDEBAR_PAGE_DESCRIPTIONS, SIDEBAR_PAGE_ORDER
 from src.app.pages import (
     architecture,
     dataset_insights,
@@ -24,16 +25,21 @@ from src.app.pages import (
     model_compare,
 )
 
-PAGES = {
-    "Overview":              ("Executive summary & KPIs",        home.render),
-    "Dataset Intelligence":  ("Class distribution & stats",      dataset_insights.render),
-    "Model Comparison":      ("LR vs DT metrics & charts",       model_compare.render),
-    "Live Prediction Lab":   ("Try the model",                   live_prediction.render),
-    "Deep Analysis":         ("Agent + RAG + Groq",              deep_analysis.render),
-    "Architecture":          ("Pipeline & repo mapping",         architecture.render),
+_PAGE_RENDERERS = {
+    "Overview": home.render,
+    "Dataset Intelligence": dataset_insights.render,
+    "Model Comparison": model_compare.render,
+    "Live Prediction Lab": live_prediction.render,
+    "Deep Analysis": deep_analysis.render,
+    "Architecture": architecture.render,
 }
 
-APP_VERSION = "1.0.0"
+PAGES = {
+    name: (SIDEBAR_PAGE_DESCRIPTIONS[name], _PAGE_RENDERERS[name])
+    for name in SIDEBAR_PAGE_ORDER
+}
+
+APP_VERSION = "2.0.0"
 
 # Icon map for each page
 PAGE_ICONS = {
@@ -97,31 +103,80 @@ def _inject_sidebar_styles():
             margin-bottom: 8px;
         }
 
-        /* ── Radio nav items ── */
+        /* ── Radio nav: full width of sidebar content ── */
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] {
+            width: 100% !important;
+        }
+        /* Hide Streamlit's widget label (we render our own sb-nav-label) */
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] > label,
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] div[data-testid="stWidgetLabel"] {
+            display: none !important;
+        }
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] > div {
+            width: 100% !important;
+            align-items: stretch !important;
+        }
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] {
+            width: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 2px !important;
+        }
         section[data-testid="stSidebar"] div[data-testid="stRadio"] label {
             font-family: 'DM Mono', monospace !important;
             font-size: 12px !important;
             font-weight: 400 !important;
             color: #64748b !important;
-            padding: 6px 8px !important;
+            padding: 8px 12px !important;
             border-radius: 6px !important;
-            transition: background 0.15s !important;
+            transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s !important;
             display: flex !important;
             align-items: center !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+            margin: 0 !important;
+            border: 1px solid transparent !important;
+            position: relative !important;
         }
         section[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover {
             background: #f8fafc !important;
             color: #0f172a !important;
+            border-color: #e2e8f0 !important;
         }
         /* Hide default radio circle */
         section[data-testid="stSidebar"] div[data-testid="stRadio"] label > div:first-child {
             display: none !important;
         }
-        /* Active nav item */
-        section[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-baseweb="radio"][aria-checked="true"] {
-            background: #f1f5f9 !important;
+        /* Active nav item — clean pill highlight */
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-baseweb="radio"][aria-checked="true"],
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) {
+            background: #eef2ff !important;
             color: #0f172a !important;
-            font-weight: 500 !important;
+            font-weight: 600 !important;
+            border-color: rgba(99, 102, 241, 0.35) !important;
+            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.10) !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+            border-radius: 10px !important;
+        }
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-baseweb="radio"][aria-checked="true"]::before,
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked)::before {
+            content: "" !important;
+            position: absolute !important;
+            left: 8px !important;
+            width: 6px !important;
+            height: 6px !important;
+            border-radius: 999px !important;
+            background: #4f46e5 !important;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.14) !important;
+        }
+        /* Give the dot space */
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-baseweb="radio"][aria-checked="true"],
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) {
+            padding-left: 24px !important;
         }
 
         /* ── Meta block ── */
@@ -192,7 +247,7 @@ def run():
         # Nav
         st.markdown('<p class="sb-nav-label">Navigate</p>', unsafe_allow_html=True)
         page = st.radio(
-            "Navigate",
+            "",
             list(PAGES.keys()),
             label_visibility="collapsed",
             key="nav_radio",

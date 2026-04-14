@@ -1,26 +1,28 @@
 <div align="center">
 
+<img src="https://img.shields.io/badge/AI%2FML-Project%2011-6366F1?style=for-the-badge&logoColor=white" alt="Project Badge"/>
+
 # News Credibility Classification System
 
-### Intelligent Misinformation Detection via Classical NLP and Machine Learning
+> **Intelligent misinformation detection** combining classical NLP, retrieval-augmented generation, and LLM reasoning — from TF-IDF baselines to a full agentic fact-checking pipeline.
 
 [![Python](https://img.shields.io/badge/Python-3.8%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![scikit-learn](https://img.shields.io/badge/scikit--learn-1.x-F7931E?style=flat-square&logo=scikitlearn&logoColor=white)](https://scikit-learn.org)
 [![Streamlit](https://img.shields.io/badge/Streamlit-Deployed-FF4B4B?style=flat-square&logo=streamlit&logoColor=white)](https://streamlit.io)
-[![LangGraph](https://img.shields.io/badge/LangGraph-Agent%20workflows-1C3C3C?style=flat-square)](https://langchain-ai.github.io/langgraph/)
+[![LangGraph](https://img.shields.io/badge/LangGraph-Agentic%20Workflows-1C3C3C?style=flat-square)](https://langchain-ai.github.io/langgraph/)
 [![Groq](https://img.shields.io/badge/Groq-LLM%20API-F55000?style=flat-square&logo=groq&logoColor=white)](https://groq.com/)
-[![FAISS](https://img.shields.io/badge/FAISS-Vector%20index-0096D6?style=flat-square)](https://github.com/facebookresearch/faiss)
+[![FAISS](https://img.shields.io/badge/FAISS-Vector%20Index-0096D6?style=flat-square)](https://github.com/facebookresearch/faiss)
 [![Sentence Transformers](https://img.shields.io/badge/Sentence--Transformers-MiniLM-FF6F00?style=flat-square)](https://www.sbert.net/)
 [![Hugging Face](https://img.shields.io/badge/Hugging%20Face-Inference%20API-FFD21E?style=flat-square&logo=huggingface&logoColor=000)](https://huggingface.co/)
 [![Plotly](https://img.shields.io/badge/Plotly-Analytics-3F4F75?style=flat-square&logo=plotly&logoColor=white)](https://plotly.com/python/)
-[![License](https://img.shields.io/badge/License-MIT-22C55E?style=flat-square)](LICENSE.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-22C55E?style=flat-square)](LICENSE.md)
 [![Dataset](https://img.shields.io/badge/Dataset-Fake%20%26%20Real%20News%20(Kaggle)-6366F1?style=flat-square)](https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset)
 
-**Project 11 · AI/ML Systems** (Milestone 1 ML core + Milestone 2 agent stack in-repo)
+**[🚀 Live Demo](https://news-creditability.streamlit.app/)** &nbsp;·&nbsp; **[▶️ Video Walkthrough](https://youtu.be/U1Nnd-8Odbs?si=5IFfdhePuDTRlmCg)** &nbsp;·&nbsp; **[📑 Research paper](docs/research_paper.pdf)** &nbsp;·&nbsp; **[📄 Project brief](docs/Project_11_AI_ML.pdf)**
 
-[Overview](#overview) · [Architecture](#system-architecture) · [Quickstart](#quickstart) · [Local setup (ML, RAG, agent)](#local-setup-ml-rag-agent) · [ML Pipeline](#ml-pipeline) · [Results](#results) · [Deployment](#deployment) · [Limitations](#limitations)
+---
 
-**Live Application:** [Demo](https://news-creditability.streamlit.app/) · **Video Walkthrough:** [Watch on YouTube](https://youtu.be/U1Nnd-8Odbs?si=5IFfdhePuDTRlmCg)
+[Overview](#overview) · [Architecture](#system-architecture) · [Quickstart](#quickstart) · [Local Setup](#local-setup-ml-rag-agent) · [ML Pipeline](#ml-pipeline) · [Results](#results) · [Deployment](#deployment) · [Limitations](#limitations) · [M1 checklist](#milestone-1-deliverables-checklist) · [M2 checklist](#milestone-2-deliverables-checklist)
 
 </div>
 
@@ -28,188 +30,172 @@
 
 ## Overview
 
-Misinformation spreads faster than manual fact-checking can scale. This repository delivers:
+Misinformation spreads faster than manual fact-checking can scale. This repository delivers a two-milestone system that grows from a high-performing classical ML classifier into a fully agentic, RAG-backed fact-checking pipeline — all accessible through a polished Streamlit interface.
 
-1. **Milestone 1 — Classical ML:** An end-to-end pipeline that classifies English news as **Fake** or **Real** using **TF-IDF** (unigrams + bigrams) with **Logistic Regression, Naive Bayes, Random Forest, and SVM**. The best model by test **F1** is saved as `model/pipeline.pkl` and powers fast inference. **No GPU is required** for training or serving the classifier.
+### Milestone 1 — Classical ML Core
 
-2. **Milestone 2 (in-repo) — Agent + RAG + Groq:** A **LangGraph** workflow (`src/agent/`) runs **normalize → ML → (optional) query planning → FAISS retrieval → structured verification → UI report**. **Groq** (`GROQ_API_KEY`) drives query planning, JSON verification (`supported` / `contradicted` / `unknown`), and narrative summaries. **MiniLM** embeddings + **FAISS** live under `src/rag/` and `data/rag/`. The **Streamlit** app includes a **Deep Analysis** page that invokes the full agent; **Live Prediction Lab** remains ML-only for quick scores.
+An end-to-end pipeline that classifies English news articles as **Fake** or **Real** using **TF-IDF** (unigrams + bigrams) with four competing models: **Logistic Regression**, **Naive Bayes**, **Random Forest**, and **SVM**. The best model by test **F1** is serialised to `model/pipeline.pkl` for fast, GPU-free inference.
 
-Trained on the **[Fake and Real News Dataset](https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset)** (40,000+ articles). See [Local setup (ML, RAG, agent)](#local-setup-ml-rag-agent) for environment variables, index build, and Groq configuration.
+### Milestone 2 — Agentic AI Layer (in-repo)
+
+A **LangGraph** workflow in `src/agent/` extends the ML core with:
+
+| Component | Details |
+|-----------|---------|
+| **Orchestration** | `normalize → ml_classify → (optional) plan_queries → retrieve → verify → report → validate_report` (bounded report retry) |
+| **RAG** | MiniLM embeddings + **FAISS** (default) or optional **Chroma**; **similarity** or **MMR** retrieval (`src/rag/`, `data/rag/`) |
+| **LLM Reasoning** | **Groq** primary (`GROQ_API_KEY`); optional **Gemini** (`GEMINI_API_KEY`); Gemini may **fall back to Groq** when configured |
+| **UI** | Streamlit **Deep Analysis**: **Agent runtime** expander (backend / retrieval mode / LLM), live node trace, structured `final_report`, optional local feedback JSONL |
+
+#### Structured credibility report (API + UI)
+
+Each agent run produces a `final_report` object with: **summary** (article overview), **risk_factors**, **fact_checks** (cross-source verification rows: supported / contradicted / unknown), **verdict** (Fake / Real), **confidence** (human-readable line with probabilities), **sources** (RAG excerpts), **credibility_score** (**High** or **Low** — rubric-style trust signal from ML + evidence tension), **pattern_detection_summary** (one paragraph: classifier signal, bucket counts, retrieval usage), and **disclaimer** (ethical / limitations text also shown on the Deep Analysis page).
+
+**Scope note:** the app performs **on-demand article analysis**, not continuous feed monitoring or alerting.
+
+#### Hallucination mitigation & grounding
+
+| Technique | Where |
+|-----------|--------|
+| **Structured JSON verification** | `verify.py`: single JSON object, fixed keys (`supported`, `contradicted`, `unknown`); **temperature 0.0** for the verifier LLM call. |
+| **Evidence-first instructions** | Prompts tell the model evidence may be partial; use **unknown** when uncertain; ML label passed only as **auxiliary**, not ground truth. |
+| **Deterministic cleanup** | `verify.py` parses, caps list lengths, dedupes, and fills safe fallbacks if JSON or API fails. |
+| **Grounded narrative** | `ui_report.py` summary prompt: base text strictly on a **FACTS_JSON** payload; **do not invent URLs**; weak evidence must be stated clearly. |
+| **RAG grounding** | Retrieved passages are the only corpus the verifier compares against (sample index under `data/rag/` — not live web crawl). |
+
+> **Course alignment:** formal problem statement, milestones, and rubric are in [`docs/Project_11_AI_ML.pdf`](docs/Project_11_AI_ML.pdf). The [M1](#milestone-1-deliverables-checklist) / [M2](#milestone-2-deliverables-checklist) checklists below map every implementation artefact to that brief.
 
 ### Dataset at a Glance
 
-
-| Attribute          | Detail                                  |
-| ------------------ | --------------------------------------- |
-| Source             | Kaggle — Fake and Real News Dataset    |
-| Total Records      | 40,000+ rows                            |
-| Class Distribution | ~50% Fake · ~50% Real                  |
-| Data Format        | CSV (Fake.csv, True.csv)                |
-| Text Fields        | Title + article body (English)          |
-| Labels             | Fake = 0, Real = 1 (assigned by loader) |
+| Attribute | Detail |
+|-----------|--------|
+| **Source** | Kaggle — Fake and Real News Dataset |
+| **Total Records** | 40,000+ rows |
+| **Class Distribution** | ~50% Fake · ~50% Real |
+| **Format** | CSV (`Fake.csv`, `True.csv`) |
+| **Text Fields** | Title + article body (English only) |
+| **Labels** | `0` = Fake · `1` = Real (assigned automatically by loader) |
 
 ---
 
 ## Project Team — Section A
 
-
-| Team Member        | Role                            | Contribution                                                                                                                                                                                                            | GitHub                                           |
-| ------------------ | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| **Shaik Tajuddin** | Project Lead and GitHub Manager | Project leadership, repository creation and enhancement, roadmap planning, repo structure design, notebook architecture, requirements and tech stack planning, PR reviews, version control and collaboration management | [@Taj-2005](https://github.com/Taj-2005)         |
-| **Nipun**          | Backend and Packaging Engineer  | Folder architecture implementation, converting notebooks into modular Python files, building reusable ML pipeline, preparing codebase for Streamlit integration, project modularization                                 | [@nipun1803](https://github.com/nipun1803)       |
-| **Hadole**         | Deployment and UI Engineer      | Streamlit application design, deployment architecture, model integration into UI, preparing deployable structure, hosting setup and deployment pipeline, usability flow                                                 | [@omkar-hadole](https://github.com/omkar-hadole) |
+| Team Member | Role | Contribution | GitHub |
+|-------------|------|-------------|--------|
+| **Shaik Tajuddin** | Project Lead & GitHub Manager | Project leadership, repository design & enhancement, roadmap planning, notebook architecture, requirements and tech-stack planning, PR reviews, version control | [@Taj-2005](https://github.com/Taj-2005) |
+| **Nipun** | Backend & Packaging Engineer | Folder architecture, converting notebooks into modular Python files, reusable ML pipeline, project modularisation for Streamlit integration | [@nipun1803](https://github.com/nipun1803) |
+| **Hadole** | Deployment & UI Engineer | Streamlit application design, deployment architecture, model integration into UI, hosting setup and CI/CD pipeline, usability flow | [@omkar-hadole](https://github.com/omkar-hadole) |
 
 ---
 
 ## System Architecture
 
-The system includes a **Training Pipeline** (offline ML), a **fast inference path** (Streamlit live lab + same code as the agent’s ML node), and an **agent inference path** (LangGraph + optional RAG + Groq) exposed as the **Deep Analysis** page and `invoke_credibility_agent()`.
+The system has three distinct execution paths that share the same core preprocessing and model artefacts:
+
+| Path | Trigger | Components |
+|------|---------|------------|
+| **Training** | `run_evaluation.py` / notebook | Data loading → preprocessing → TF-IDF → train × 4 models → evaluate → save |
+| **Fast Inference** | Live Prediction Lab | `pipeline.pkl` → `clean_text` → `predict_proba` → verdict + confidence |
+| **Agent Inference** | Deep Analysis / `invoke_credibility_agent()` | LangGraph + optional RAG (FAISS/Chroma, similarity/MMR) + LLM (Groq/Gemini) + `validate_report` |
 
 ### Training Pipeline
 
 ```
-Data Source
-───────────────────────────────────────────────
-Kaggle Fake and Real News Dataset
-dataset/Fake.csv + dataset/True.csv
-(fields: title, text, label)
-
-          │
-          ▼
-
-┌─────────────────────────────┐
-│        Data Loading         │
-│  Fake.csv + True.csv        │
-│  Merge → label (0=Fake,     │
-│  1=Real) → shuffle          │
-└─────────────┬───────────────┘
-              │
-              ▼
-
-┌─────────────────────────────┐
-│       Text Preparation      │
-│  Concatenate title + text   │
-│  Assign binary labels       │
-└─────────────┬───────────────┘
-              │
-              ▼
-
-┌─────────────────────────────────────────┐
-│            Preprocessing                │
-│  Lowercasing                            │
-│  Remove URLs and punctuation            │
-│  Stopword removal (NLTK English)        │
-│  Tokenization                           │
-│  Lemmatization (WordNet)                │
-└─────────────┬───────────────────────────┘
-              │
-              ▼
-
-┌─────────────────────────────────────────┐
-│       Feature Engineering (TF-IDF)      │
-│  max_features: 20K–25K                  │
-│  ngram_range: (1, 2) — unigrams +       │
-│  bigrams                                │
-│  sublinear_tf: True                     │
-└─────────────┬───────────────────────────┘
-              │
-              ▼
-
-┌─────────────────────────────────────────┐
-│        Machine Learning Models          │
-│  Logistic Regression                    │
-│  Naive Bayes                            │
-│  Random Forest                          │
-│  SVM (LinearSVC)                        │
-│  Best model by F1 → pipeline.pkl        │
-└─────────────┬───────────────────────────┘
-              │
-              ▼
-
-┌─────────────────────────────────────────┐
-│           Model Evaluation              │
-│  Precision / Recall / F1                │
-│  ROC-AUC / Confusion Matrix             │
-│  5-Fold Cross-Validation F1             │
-└─────────────┬───────────────────────────┘
-              │
-              ▼
-
-┌─────────────────────────────────────────┐
-│           Model Persistence             │
-│  model/pipeline.pkl                     │
-│  model/evaluation_results.json          │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│  Data Source                                    │
+│  dataset/Fake.csv + dataset/True.csv            │
+│  Fields: title, text → label (0=Fake, 1=Real)  │
+└────────────────────────┬────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────┐
+│  Preprocessing                                  │
+│  Lowercase · strip URLs/punctuation             │
+│  NLTK stopword removal · tokenise               │
+│  WordNet lemmatisation                          │
+└────────────────────────┬────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────┐
+│  Feature Engineering (TF-IDF)                   │
+│  max_features: 20K–25K · ngram: (1,2)           │
+│  sublinear_tf: True                             │
+└────────────────────────┬────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────┐
+│  Model Training                                 │
+│  Logistic Regression · Naive Bayes              │
+│  Random Forest · SVM (LinearSVC)                │
+│  Best by F1 → model/pipeline.pkl               │
+└────────────────────────┬────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────┐
+│  Evaluation                                     │
+│  Precision / Recall / F1 · ROC-AUC              │
+│  Confusion Matrix · 5-Fold CV F1                │
+│  → model/evaluation_results.json               │
+└─────────────────────────────────────────────────┘
 ```
 
-### Inference Pipeline
+### Fast Inference Pipeline
 
 ```
-User Input (Article Text)
-          │
-          ▼
-
-┌─────────────────────────┐
-│    Load Saved Model     │
-│    pipeline.pkl         │
-└───────────┬─────────────┘
-            │
-            ▼
-
-┌─────────────────────────┐
-│    Clean Input Text     │
-│  Same preprocessing     │
-│  function (no drift)    │
-└───────────┬─────────────┘
-            │
-            ▼
-
-┌─────────────────────────┐
-│     TF-IDF Transform    │
-│  Vectorize cleaned text │
-└───────────┬─────────────┘
-            │
-            ▼
-
-┌─────────────────────────┐
-│    Prediction Engine    │
-│  predict_proba()        │
-└───────────┬─────────────┘
-            │
-            ▼
-
-┌───────────────────────────────────┐
-│    Credibility Assessment Output  │
-│  Verdict: Fake / Real             │
-│  Confidence Score (0.00 – 1.00)   │
-│  Risk Level: High / Low           │
-└───────────────────────────────────┘
+User Input (article text)
+         │
+         ▼
+  Load pipeline.pkl
+         │
+         ▼
+  clean_text()  ── same function as training; no preprocessing drift
+         │
+         ▼
+  TF-IDF transform  →  predict_proba()
+         │
+         ▼
+┌─────────────────────────────────┐
+│  Credibility Assessment Output  │
+│  Verdict:     Fake / Real       │
+│  Confidence:  0.00 – 1.00       │
+│  Risk Level:  High / Low        │
+└─────────────────────────────────┘
 ```
 
-### Deep Analysis (agent) path
+### Deep Analysis — Agent Path
 
-When users run **Deep Analysis** in the app (or call `invoke_credibility_agent()`), the flow is:
+When a user triggers **Deep Analysis** (or calls `invoke_credibility_agent()`), the LangGraph workflow executes:
 
-`raw_text` → **normalize** (`clean_text`) → **ML** (`pipeline.pkl`) → if confidence is below the threshold → **plan_queries** (Groq) → **retrieve** (MiniLM + FAISS) → **verify** (Groq → structured JSON) → **report** (`build_ui_final_report`: summary, risk_factors, fact_checks, verdict, confidence, sources) → UI.
+```
+raw_text
+   → normalize (clean_text)
+   → ml_classify (pipeline.pkl)
+   → [if confidence < threshold]
+       → plan_queries (LLM: Groq / Gemini)
+       → retrieve (MiniLM + FAISS or Chroma · similarity or MMR)
+       → verify (LLM → structured JSON; Gemini may fall back to Groq)
+   → report (build_ui_final_report)
+   → validate_report (schema guard; at most one extra report attempt)
+   → UI (summary · risk_factors · fact_checks · sources · disclaimer)
+```
 
-High-confidence articles skip RAG and go straight to **report** (summary may still use Groq when configured).
+**Deep Analysis (Streamlit)** uses a high threshold so the **plan → retrieve → verify** branch **always runs** for demos; the generic graph still **skips** that branch when ML confidence is high (then **`report → validate_report`** only). Configure **RAG backend**, **MMR**, and **LLM provider** under **Deep Analysis → Agent runtime**.
 
 ### Data Flow Summary
 
+| Stage | Input | Output | Module |
+|-------|-------|--------|--------|
+| Load | `Fake.csv`, `True.csv` | Merged DataFrame with labels | `src/data/loader.py` |
+| Prepare | Combined title + text | `cleaned_text`, `label` columns | `src/features/preprocessing.py` |
+| Split | X (text), y (label) | Stratified 80/20 train/test sets | `sklearn.model_selection` |
+| Vectorise | Text series | Sparse TF-IDF matrix | `Pipeline` (fit on train only) |
+| Train | TF-IDF matrix + labels | Fitted Pipeline artefact | `src/models/pipelines.py` |
+| Evaluate | Pipeline + test set | Classification report, ROC-AUC, CM | `src/evaluation/` |
+| Serialise | Fitted pipeline | `model/pipeline.pkl` | `joblib` |
+| Serve — ML | Raw user text | Verdict + probability | `src/app/pages/live_prediction.py` |
+| Serve — Agent | Raw user text | `final_report` + graph state | `src/app/pages/deep_analysis.py` |
 
-| Stage     | Input                                  | Output                             | Module                           |
-| --------- | -------------------------------------- | ---------------------------------- | -------------------------------- |
-| Load      | `dataset/Fake.csv`, `dataset/True.csv` | Merged DataFrame with labels       | `src/data/loader.py`             |
-| Prepare   | Combined title + text                  | `cleaned_text`, `label` columns    | `src/features/preprocessing.py`  |
-| Split     | X (text), y (label)                    | Stratified 80/20 train/test sets   | `sklearn.model_selection`        |
-| Vectorize | Text series                            | Sparse TF-IDF matrix               | `Pipeline` (fit on train only)   |
-| Train     | TF-IDF matrix + labels                 | Fitted Pipeline artifact           | `src/models/pipelines.py`        |
-| Evaluate  | Pipeline + test set                    | Classification report, ROC-AUC, CM | `src/evaluation/`                |
-| Serialize | Fitted pipeline                        | `model/pipeline.pkl`               | `joblib`                         |
-| Serve (ML) | Raw user text                         | Verdict + probability              | `src/app/pages/live_prediction.py`, `src/app/core.py` |
-| Serve (agent) | Raw user text                      | `final_report` + graph state       | `src/app/pages/deep_analysis.py`, `src/agent/graph.py` |
-
-> **Critical invariant:** The same `clean_text()` function and the same fitted pipeline (vectorizer + classifier) are used in both training and inference to eliminate preprocessing drift.
+> **Critical invariant:** `clean_text()` and the fitted `pipeline.pkl` are shared between training and all inference paths to eliminate preprocessing drift.
 
 ---
 
@@ -218,76 +204,100 @@ High-confidence articles skip RAG and go straight to **report** (summary may sti
 ```
 news_creditability_analysis/
 ├── README.md
+├── LICENSE.md                          # MIT licence + contributor list
 ├── requirements.txt
-├── .env.example                        # Template for GROQ_API_KEY (copy to .env; do not commit secrets)
+├── .env.example                        # Template for GROQ / optional GEMINI / LLM_PROVIDER (never commit .env)
 ├── app.py                              # Streamlit entry point
+│
 ├── .streamlit/
-│   └── config.toml                     # Theme configuration
+│   ├── config.toml                     # Theme configuration
+│   └── secrets.example.toml           # Streamlit Cloud secrets template
+│
+├── docs/
+│   ├── Project_11_AI_ML.pdf           # Course brief, rubric, and submission notes
+│   └── research_paper.pdf             # Project research write-up
+│
 ├── notebook/
-│   └── news_credibility.ipynb          # Full pipeline: load, EDA, preprocess, train, evaluate, save
+│   └── news_credibility.ipynb         # Full pipeline: EDA → preprocess → train → evaluate → save
+│
 ├── scripts/
-│   ├── run_evaluation.py               # Train all models, select best by F1, save artifacts
-│   └── build_rag_index.py              # Build local MiniLM + FAISS index under data/rag/
+│   ├── run_evaluation.py              # Train all models, select best by F1, save artefacts
+│   ├── build_rag_index.py             # Build MiniLM + FAISS index under data/rag/
+│   └── build_chroma_store.py          # Optional: persist Chroma store under data/rag/chroma_store/
+│
 ├── dataset/
-│   ├── Fake.csv                        # Kaggle fake news corpus
-│   └── True.csv                        # Kaggle real news corpus
+│   ├── Fake.csv                       # Kaggle fake news corpus
+│   └── True.csv                       # Kaggle real news corpus
+│
 ├── model/
-│   ├── pipeline.pkl                    # Best model (TF-IDF + classifier)
-│   └── evaluation_results.json         # Metrics and dataset stats (generated at runtime)
-├── plots/                              # EDA and evaluation figures
+│   ├── pipeline.pkl                   # Best model (TF-IDF + classifier)
+│   └── evaluation_results.json        # Metrics and dataset stats (generated at runtime)
+│
+├── plots/                             # EDA and evaluation figures
+│
 ├── data/
-│   └── rag/                            # Generated: faiss.index + chunks.json (see scripts/build_rag_index.py)
+│   └── rag/                           # faiss.index + chunks.json (+ optional chroma_store/ from build_chroma_store.py)
+│
 └── src/
-    ├── __init__.py
+    ├── config/
+    │   └── env_bootstrap.py           # Dotenv + Streamlit secrets merge on startup
     ├── data/
-    │   └── loader.py                   # load_dataset() — merges CSVs and assigns labels
+    │   └── loader.py                  # load_dataset() — merges CSVs and assigns labels
     ├── features/
-    │   └── preprocessing.py            # clean_text(), prepare_text_column() — shared train/inference
+    │   └── preprocessing.py           # clean_text(), prepare_text_column() — shared train/inference
     ├── models/
-    │   └── pipelines.py                # build_lr_pipeline(), build_nb_pipeline(), build_rf_pipeline(), build_svm_pipeline()
+    │   └── pipelines.py               # build_lr/nb/rf/svm_pipeline()
     ├── evaluation/
     │   ├── metrics.py
-    │   ├── results_loader.py            # Loads evaluation_results.json for dashboard
-    │   ├── plotly_viz.py               # Plotly charts (ROC, PR curve, confusion matrix, gauge)
+    │   ├── results_loader.py          # Loads evaluation_results.json for dashboard
+    │   ├── plotly_viz.py              # ROC, PR curve, confusion matrix, gauge charts
     │   └── visualization.py
-    ├── agent/                          # Milestone 2 — LangGraph + Groq (does not replace ML training code)
-    │   ├── state.py                    # AgentState + DEFAULT_LOW_CONFIDENCE_THRESHOLD
-    │   ├── graph.py                    # build_graph(), invoke_credibility_agent()
-    │   ├── llm_service.py              # Groq generate(); GROQ_API_KEY, optional GROQ_MODEL
-    │   ├── ui_report.py                # build_ui_final_report() — UI dict (summary, risk_factors, …)
+    │
+    ├── agent/                         # Milestone 2 — LangGraph + LLM + RAG
+    │   ├── state.py                   # AgentState + DEFAULT_LOW_CONFIDENCE_THRESHOLD
+    │   ├── graph.py                   # build_graph(), invoke_credibility_agent(); validate_report + retry edge
+    │   ├── llm_service.py             # Groq / optional Gemini; Gemini → Groq fallback when configured
+    │   ├── feedback.py                # Optional JSONL feedback logger (Deep Analysis)
+    │   ├── ui_report.py               # build_ui_final_report() → UI dict
     │   └── nodes/
-    │       ├── normalize.py            # clean_text; ml_classify → core.run_prediction
-    │       ├── ml_classify.py          # TF-IDF + classifier via core
-    │       ├── plan_queries.py         # Groq: RAG search queries (low-confidence path)
-    │       ├── retrieve.py             # FAISS top-k (data/rag)
-    │       ├── verify.py               # Groq → JSON {supported, contradicted, unknown} vs evidence
-    │       └── report.py               # final_report via ui_report (ML + verification)
-    ├── rag/                            # Local RAG — MiniLM + FAISS (Milestone 2)
-    │   ├── embeddings.py               # sentence-transformers MiniLM, L2-normalized vectors
-    │   ├── store.py                    # FAISS IndexFlatIP + chunks.json persistence
-    │   └── retrieve.py                 # Top-k similarity search
+    │       ├── normalize.py           # clean_text wrapper
+    │       ├── ml_classify.py         # TF-IDF + classifier via core
+    │       ├── plan_queries.py        # LLM RAG query planning (fallback heuristics)
+    │       ├── retrieve.py            # FAISS or Chroma; similarity or MMR
+    │       ├── verify.py              # LLM → JSON {supported, contradicted, unknown}
+    │       ├── report.py              # Assemble final_report via ui_report
+    │       └── validate_report.py     # Schema validation; triggers bounded report retry
+    │
+    ├── rag/                           # Local RAG — MiniLM + FAISS (optional Chroma)
+    │   ├── embeddings.py              # sentence-transformers MiniLM, L2-normalised vectors
+    │   ├── store.py                   # FAISS IndexFlatIP + chunks.json persistence
+    │   ├── chroma_store.py            # Optional persistent Chroma collection
+    │   └── retrieve.py                # Similarity or MMR; backend switch (faiss / chroma)
+    │
     ├── utils/
     └── app/
-        ├── core.py                     # load_model(), run_prediction(), validation
-        ├── dashboard.py                # Multi-page Streamlit app with sidebar navigation
-        ├── main.py                     # Alternate entry point
+        ├── core.py                    # load_model(), run_prediction(), validation
+        ├── dashboard.py               # Multi-page Streamlit app with sidebar navigation
+        ├── main.py                    # Alternate entry point
         ├── components/
-        │   ├── styles.py               # Application CSS and theming
-        │   └── ui.py                   # Shared UI components (page_header, etc.)
+        │   ├── styles.py              # Application CSS and theming
+        │   ├── ui.py                  # Shared UI components (page_header, etc.)
+        │   ├── agent_pipeline.py      # Deep Analysis + Live Prediction stepped pipeline UI
+        │   └── architecture_flow.py   # Animated ML vs. agent architecture diagram (HTML/CSS)
         └── pages/
-            ├── home.py                 # Overview — KPIs and dataset summary
-            ├── dataset_insights.py     # Class distribution, text length, TF-IDF features
-            ├── model_compare.py        # ROC, PR curve, confusion matrix, feature importance
-            ├── live_prediction.py      # Text input → Fake/Real verdict with confidence
-            ├── deep_analysis.py        # Agent pipeline UI (summary, risks, sources, verdict)
-            └── architecture.py        # Pipeline and repo mapping
+            ├── home.py                # Overview — KPIs, dataset summary, dual-milestone pitch
+            ├── dataset_insights.py    # Class distribution, text lengths, TF-IDF features
+            ├── model_compare.py       # ROC, PR curve, confusion matrix, feature importance
+            ├── live_prediction.py     # Fast ML-only verdict + confidence gauge
+            ├── deep_analysis.py       # LangGraph stream, Agent runtime controls, feedback, structured report
+            └── architecture.py        # Mermaid diagrams, animated pipeline, repo map
 ```
 
 ---
 
 ## Quickstart
 
-> This repo may include a pre-trained `model/pipeline.pkl`. You can skip steps 3–4 and open the app after step 2. For **RAG** (FAISS + MiniLM), the **LangGraph agent**, and **Groq** (`GROQ_API_KEY`), follow [Local setup (ML, RAG, agent)](#local-setup-ml-rag-agent) after installing dependencies.
+> **Note:** The repo may include a pre-trained `model/pipeline.pkl`. If so, you can skip steps 3–4 and go straight from installation to launching the app. For the full **RAG + LangGraph + LLM** stack, follow [Local Setup](#local-setup-ml-rag-agent) after installing dependencies.
 
 ### 1. Clone the Repository
 
@@ -300,13 +310,13 @@ cd news_creditability_analysis
 
 ```bash
 python3 -m venv venv
-source venv/bin/activate          # Windows: venv\Scripts\activate
+source venv/bin/activate      # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
 ### 3. Add the Dataset
 
-Download the [Fake and Real News Dataset](https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset) from Kaggle and place `Fake.csv` and `True.csv` inside the `dataset/` folder.
+Download the [Fake and Real News Dataset](https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset) from Kaggle and place both files under `dataset/`:
 
 ```
 dataset/
@@ -314,24 +324,24 @@ dataset/
 └── True.csv
 ```
 
-Columns used: `title`, `text`. Labels are assigned automatically — Fake = 0, Real = 1.
+Columns used: `title`, `text`. Labels are assigned automatically (`Fake = 0`, `Real = 1`).
 
 ### 4. Train the Model
 
-**Option A — Notebook (full analysis with plots and model comparison)**
+**Option A — Jupyter Notebook** *(full EDA, plots, and model comparison)*
 
 ```bash
 jupyter notebook notebook/news_credibility.ipynb
-# Run from repo root so dataset/ and src/ are on the Python path.
-# Outputs: model/pipeline.pkl, model/evaluation_results.json, plots/*.png
+# Run from the repo root so dataset/ and src/ are on the Python path.
+# Outputs: model/pipeline.pkl  model/evaluation_results.json  plots/*.png
 ```
 
-**Option B — Script (fast training and artifact generation)**
+**Option B — Script** *(fast training and artefact generation)*
 
 ```bash
 python scripts/run_evaluation.py
 # Trains LR, Naive Bayes, Random Forest, and SVM.
-# Picks the best model by F1 and saves model/pipeline.pkl and model/evaluation_results.json.
+# Saves the best model by F1 as model/pipeline.pkl and model/evaluation_results.json.
 ```
 
 ### 5. Launch the Application
@@ -341,110 +351,135 @@ streamlit run app.py
 # Opens at http://localhost:8501
 ```
 
-The **News Credibility Analyzer** dashboard has six pages: **Overview**, **Dataset Intelligence**, **Model Comparison**, **Live Prediction Lab**, **Deep Analysis** (LangGraph agent), and **Architecture**. Use **Live Prediction Lab** for fast ML-only scoring, or **Deep Analysis** for summary, risk factors, and RAG sources.
+The **News Credibility Analyzer** dashboard includes six pages:
+
+| Page | Description |
+|------|-------------|
+| **Overview** | KPIs, dataset summary, dual-milestone system pitch |
+| **Dataset Intelligence** | Class distribution, text lengths, top TF-IDF features |
+| **Model Comparison** | ROC curves, PR curves, confusion matrices, CV F1 chart |
+| **Live Prediction Lab** | Fast ML-only inference — verdict + confidence gauge |
+| **Deep Analysis** | Full LangGraph agent — Agent runtime (FAISS/Chroma, similarity/MMR, Groq/Gemini), live trace, structured report |
+| **Architecture** | Training/runtime Mermaid diagrams, animated pipeline, repo map |
 
 ---
 
-## Local setup (ML, RAG, agent)
+## Local Setup (ML, RAG, Agent)
 
-Use this checklist after [Quickstart](#quickstart) steps 1–2 (`venv` + `pip install -r requirements.txt`). Order matters where noted.
+Use this checklist after completing Quickstart steps 1–2. **Order matters** where noted.
 
 ### Prerequisites
 
-| Item | Notes |
-|------|--------|
-| **Python** | 3.10–3.12 recommended (3.14 may show LangChain/Pydantic warnings). |
-| **Disk** | ~500 MB–1 GB for `sentence-transformers` + first-time MiniLM download; `faiss-cpu` is small. |
-| **Network** | Required once to download **all-MiniLM-L6-v2** from Hugging Face when building the RAG index; Groq calls need outbound HTTPS. |
+| Requirement | Details |
+|-------------|---------|
+| **Python** | 3.10–3.12 recommended (3.14 may exhibit LangChain/Pydantic warnings) |
+| **Disk** | ~500 MB – 1 GB for `sentence-transformers` + first-time MiniLM download |
+| **Network** | Required once to download `all-MiniLM-L6-v2` from Hugging Face; Groq calls require outbound HTTPS |
 
-### A. Credibility ML model (`model/pipeline.pkl`)
+### A. ML Model (`model/pipeline.pkl`)
 
-The repo may already include `model/pipeline.pkl`. To regenerate metrics and the best TF-IDF classifier:
+If the repo already includes `model/pipeline.pkl`, skip this step. To regenerate:
 
-1. Place Kaggle **`Fake.csv`** / **`True.csv`** under `dataset/` (see [Quickstart §3](#3-add-the-dataset)).
-2. From the **repository root**, with the venv activated:
+1. Place `Fake.csv` / `True.csv` under `dataset/` (see [Quickstart §3](#3-add-the-dataset)).
+2. From the repository root, with the virtual environment activated:
 
 ```bash
 python scripts/run_evaluation.py
+# Outputs: model/pipeline.pkl  model/evaluation_results.json
 ```
 
-Outputs: `model/pipeline.pkl`, `model/evaluation_results.json`.
+Alternatively, run `notebook/news_credibility.ipynb` from the repo root for the full analysis and plots.
 
-*(Alternatively run `notebook/news_credibility.ipynb` from the repo root for the full report and plots.)*
-
-### B. RAG index (MiniLM + FAISS under `data/rag/`)
-
-The RAG stack lives in `src/rag/` and uses **sentence-transformers** (`all-MiniLM-L6-v2`) plus **FAISS**. The first run downloads the embedding model into **`<repo>/.cache/huggingface/`** (see `src/rag/embeddings.py`); that folder is gitignored.
-
-From the **repository root**:
+### B. RAG Index (MiniLM + FAISS)
 
 ```bash
 python scripts/build_rag_index.py
+# Downloads all-MiniLM-L6-v2 on first run (cached to .cache/huggingface/)
+# Outputs: data/rag/faiss.index  data/rag/chunks.json
+# Prints a short retrieval smoke-test to confirm the index is working.
 ```
 
-This embeds a small built-in sample corpus, writes **`data/rag/faiss.index`** and **`data/rag/chunks.json`**, and prints a short retrieval smoke test. If those files are missing, the agent’s retrieve step still completes but records a `rag_error` in the report until you run the script.
+If `data/rag/` is missing when the agent runs, the `retrieve` node completes but records a `rag_error` in the report. Re-run this script whenever you change chunking logic or swap in a custom corpus (edit `SAMPLE_DOCUMENTS` in the script).
 
-**Re-run** this script whenever you change chunking logic or swap in your own corpus (edit `SAMPLE_DOCUMENTS` in `scripts/build_rag_index.py` or extend the script to load JSON/CSV).
+### B2. Optional ChromaDB Store (alternative backend)
 
-### C. Groq API (LLM reasoning)
+If you want a Chroma-backed vector store (optional), build it after FAISS:
 
-The agent uses **Groq** for query planning, verification, and the narrative summary in `src/agent/llm_service.py`. Call **`generate(prompt, *, temperature=0.2, max_tokens=2048)`**; verification uses **`temperature=0.0`** for deterministic JSON-style outputs.
+```bash
+python scripts/build_chroma_store.py
+# Outputs: data/rag/chroma_store/
+```
 
-1. Create a key at [Groq Console](https://console.groq.com/keys).
-2. Export it or use a `.env` file in the repo root (see **`.env.example`**). `python-dotenv` loads `.env` automatically when the LLM module is first used.
+On the **Deep Analysis** page, open **Agent runtime** and set **RAG backend** to `chroma`. If `data/rag/chroma_store/` is missing, the agent continues but records a `rag_error`.
+
+### C. Groq API Key (LLM Reasoning)
+
+1. Generate a key at [Groq Console](https://console.groq.com/keys).
+2. Copy `.env.example` to `.env` and add your key — `python-dotenv` loads it automatically.
+
+```bash
+cp .env.example .env
+# Edit .env and set GROQ_API_KEY=<your-key>
+```
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GROQ_API_KEY` | Yes (for LLM output) | Secret key from Groq. |
-| `GROQ_MODEL` | No | Chat model id; default **`llama-3.1-8b-instant`**. |
+| `GROQ_API_KEY` | **Yes** (for LLM output) | Secret key from Groq Console |
+| `GROQ_MODEL` | No | Chat model ID; defaults to `llama-3.1-8b-instant` |
 
-If `GROQ_API_KEY` is missing, **plan_queries** falls back to text-window queries; **verify** returns **`supported` / `contradicted` / `unknown`** lists with a deterministic **`unknown`** note (and **`llm_error`**). **report** still returns structured fields; **`llm_summary`** may be `null` with **`llm_report_error`** set.
+**Graceful degradation without a key:** `plan_queries` falls back to text-window queries; `verify` returns deterministic `unknown` entries (with `llm_error` set); `report` still populates all structured fields, though `llm_summary` may be `null`.
 
-### D. LangGraph agent (normalize → ML → optional RAG + LLM → report)
+#### Optional Gemini Backend (with fallback to Groq)
 
-The compiled graph is in `src/agent/graph.py`. **Low confidence** path: `plan_queries` (Groq) → `retrieve` (FAISS) → `verify` (Groq) → `report`. **High confidence** path: `report` only (still may refresh the narrative summary via Groq).
+```bash
+export LLM_PROVIDER=gemini
+export GEMINI_API_KEY=...
+```
 
-**Verification output** (`state["verification"]` after the verify node): always includes three string lists — **`supported`**, **`contradicted`**, **`unknown`** — plus **`mode`** (`structured` | `no_evidence` | `fallback`), **`llm`**, **`chunks_reviewed`**, and **`top_scores`**. The LLM is instructed to return JSON only; the node parses, normalizes (caps length/count, dedupes), and fills safe fallbacks if parsing or the API fails.
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `LLM_PROVIDER` | No | `auto` (default), `groq`, or `gemini` |
+| `GEMINI_API_KEY` | Yes (Gemini) | Gemini API key |
+| `GEMINI_MODEL` | No | Defaults to `gemini-1.5-flash` |
 
-**Final report** (`out["final_report"]` — UI-oriented, built in `src/agent/ui_report.py`): **`summary`**, **`risk_factors`**, **`fact_checks`** (`{ "status", "finding" }` rows), **`verdict`**, **`confidence`**, and **`sources`** (RAG excerpts + scores for the Deep Analysis page). You can also call **`build_ui_final_report(state_dict)`** outside the graph.
+If Gemini is selected and fails at runtime, the agent **falls back to Groq** when `GROQ_API_KEY` is set.
 
-From the **repository root**, with `model/pipeline.pkl`, optional `data/rag/`, and `GROQ_API_KEY` set:
+### D. LangGraph Agent
+
+With `model/pipeline.pkl`, `data/rag/`, and `GROQ_API_KEY` in place, test the full agent from the command line:
 
 ```bash
 python -c "
 from src.agent.graph import invoke_credibility_agent
 import json
 out = invoke_credibility_agent(
-    'WASHINGTON (Reuters) - The Federal Reserve left interest rates unchanged.',
+    'WASHINGTON (Reuters) — The Federal Reserve left interest rates unchanged.',
     confidence_threshold=0.65,
 )
-fr = out.get('final_report', {})
-print(json.dumps(fr, indent=2, ensure_ascii=False)[:1200])
+print(json.dumps(out.get('final_report', {}), indent=2, ensure_ascii=False)[:1200])
 "
 ```
 
-- **`confidence_threshold`**: if the model’s predicted-class probability is **below** this value, the graph runs **plan_queries → retrieve → verify → report**; otherwise it goes **straight to report**. Default: `DEFAULT_LOW_CONFIDENCE_THRESHOLD` in `src/agent/state.py`.
+- **`confidence_threshold`**: articles whose predicted-class probability falls **below** this value trigger the full `plan_queries → retrieve → verify → report` path; others go straight to `report`. Default is `DEFAULT_LOW_CONFIDENCE_THRESHOLD` in `src/agent/state.py`.
+- You may also call `build_graph().invoke({"raw_text": "..."})` directly.
 
-You can also call **`build_graph().invoke({"raw_text": "..."})`**.
-
-### E. One-shot local order (copy-paste)
-
-From a fresh clone (after `venv` + `pip install -r requirements.txt`):
+### E. One-Shot Setup (Copy-Paste)
 
 ```bash
-cp .env.example .env   # then edit .env and set GROQ_API_KEY
+# 0. Clone and install (see Quickstart §1–2)
 
-# Optional: train ML if you have dataset/ CSVs
+# 1. Configure environment
+cp .env.example .env          # then set GROQ_API_KEY in .env
+
+# 2. Train the ML model (requires dataset/ CSVs)
 python scripts/run_evaluation.py
 
-# RAG index (downloads MiniLM on first run)
+# 3. Build the RAG index (downloads MiniLM on first run)
 python scripts/build_rag_index.py
 
-# Web UI
-streamlit run app.py
+# 4. Launch the app
+streamlit run app.py          # http://localhost:8501
 ```
-
-Open **http://localhost:8501**. Use **Live Prediction Lab** for the **ML pipeline** only, or **Deep Analysis** for the full **LangGraph + RAG + Groq** flow. The same agent can be run from code with **`invoke_credibility_agent()`** / **`build_graph().invoke()`**.
 
 ---
 
@@ -452,7 +487,7 @@ Open **http://localhost:8501**. Use **Live Prediction Lab** for the **ML pipelin
 
 ### Stage 1 — Text Preprocessing
 
-Every document passes through the same deterministic `clean_text()` function at both training time and inference time, ensuring no preprocessing drift.
+Every document passes through the same deterministic `clean_text()` function at both training time and inference time, ensuring zero preprocessing drift.
 
 ```
 Raw string
@@ -460,11 +495,11 @@ Raw string
   → remove URLs (http / https / www)
   → remove @mentions
   → keep only [a-z] and whitespace
-  → tokenize (split on whitespace)
+  → tokenise (split on whitespace)
   → remove NLTK English stopwords
-  → remove tokens with length <= 2
-  → WordNet lemmatization
-  → rejoin tokens with space
+  → remove tokens with length ≤ 2
+  → WordNet lemmatisation
+  → rejoin tokens with a single space
 ```
 
 ```python
@@ -482,26 +517,24 @@ def clean_text(text: str) -> str:
 
 ### Stage 2 — Feature Extraction (TF-IDF)
 
-
-| Hyperparameter | Value                              |
-| -------------- | ---------------------------------- |
+| Hyperparameter | Value |
+|----------------|-------|
 | `max_features` | 20,000 – 25,000 (model-dependent) |
-| `ngram_range`  | (1, 2) — unigrams and bigrams     |
-| `min_df`       | 2                                  |
-| `max_df`       | 0.92                               |
-| `sublinear_tf` | True                               |
+| `ngram_range` | `(1, 2)` — unigrams and bigrams |
+| `min_df` | 2 |
+| `max_df` | 0.92 |
+| `sublinear_tf` | `True` |
 
 ### Stage 3 — Classification Models
 
+| Model | Key Hyperparameters | Notes |
+|-------|---------------------|-------|
+| **Logistic Regression** | `C=2.0`, `class_weight='balanced'`, `solver='lbfgs'` | Interpretable; calibrated probabilities |
+| **Naive Bayes** | `MultinomialNB(alpha=0.1)` | Fast; performs well on sparse TF-IDF matrices |
+| **Random Forest** | `n_estimators=200`, `max_depth=30`, `class_weight='balanced'` | Non-linear; robust to feature noise |
+| **SVM** | `LinearSVC(C=1.0)`, `class_weight='balanced'` | Strong linear decision boundary |
 
-| Model                   | Key Hyperparameters                                           | Notes                                        |
-| ----------------------- | ------------------------------------------------------------- | -------------------------------------------- |
-| **Logistic Regression** | `C=2.0`, `class_weight='balanced'`, `solver='lbfgs'`          | Interpretable; calibrated probabilities      |
-| **Naive Bayes**         | `MultinomialNB(alpha=0.1)`                                    | Fast; works well with sparse TF-IDF matrices |
-| **Random Forest**       | `n_estimators=200`, `max_depth=30`, `class_weight='balanced'` | Non-linear; robust to feature noise          |
-| **SVM**                 | `LinearSVC(C=1.0)`, `class_weight='balanced'`                 | Strong linear decision boundary              |
-
-The best model by F1 Score is saved as `model/pipeline.pkl` and used by the Streamlit application. All four models are compared in the notebook and in the **Model Comparison** dashboard page.
+The best model by F1 score is saved as `model/pipeline.pkl`. All four models are compared in the notebook and in the **Model Comparison** dashboard page.
 
 ### Stage 4 — Evaluation
 
@@ -516,24 +549,7 @@ print(classification_report(y_test, y_pred, target_names=['Fake', 'Real']))
 print(f"ROC-AUC: {roc_auc_score(y_test, y_proba):.4f}")
 
 cv_scores = cross_val_score(pipeline, X, y, cv=5, scoring='f1', n_jobs=-1)
-print(f"5-Fold CV F1: {cv_scores.mean():.4f} +/- {cv_scores.std():.4f}")
-```
-
-### Prediction Path (Inference)
-
-```
-User Input (raw text)
-    |
-    v
-clean_text(input)                  # deterministic preprocessing
-    |
-    v
-pipeline.predict([cleaned])        # TF-IDF transform → classifier forward pass
-pipeline.predict_proba([cleaned])
-    |
-    v
-Verdict: Fake / Real
-Probability: P(Fake) = 0.XX
+print(f"5-Fold CV F1: {cv_scores.mean():.4f} ± {cv_scores.std():.4f}")
 ```
 
 ### Usage from Python
@@ -547,8 +563,8 @@ pipeline = joblib.load("model/pipeline.pkl")
 text = "Your news headline or article body here..."
 cleaned = clean_text(text)
 
-label = pipeline.predict([cleaned])[0]         # 0 = Fake, 1 = Real
-proba = pipeline.predict_proba([cleaned])[0]   # [P(Fake), P(Real)]
+label = pipeline.predict([cleaned])[0]          # 0 = Fake, 1 = Real
+proba = pipeline.predict_proba([cleaned])[0]    # [P(Fake), P(Real)]
 
 print(f"Verdict:          {'Fake' if label == 0 else 'Real'}")
 print(f"Fake probability: {proba[0]:.2%}")
@@ -558,29 +574,27 @@ print(f"Fake probability: {proba[0]:.2%}")
 
 ## Results
 
-> Results are produced by running the notebook or `python scripts/run_evaluation.py`. The dashboard loads them from `model/evaluation_results.json`. No metrics are hardcoded.
+> Results are generated by the notebook or `python scripts/run_evaluation.py` and persisted to `model/evaluation_results.json`. The Streamlit dashboard reads from this file — no metrics are hardcoded.
 
+| Metric | Logistic Regression | Naive Bayes | Random Forest | SVM |
+|--------|---------------------|-------------|---------------|-----|
+| **Accuracy** | High | Competitive | Competitive | High |
+| **Precision / Recall / F1** | Strong | Strong | Strong | Strong |
+| **ROC-AUC** | High | Good | Good | High |
+| **5-Fold CV F1** | *See artefact* | *See artefact* | *See artefact* | *See artefact* |
 
-| Metric                      | Logistic Regression | Naive Bayes  | Random Forest | SVM          |
-| --------------------------- | ------------------- | ------------ | ------------- | ------------ |
-| **Accuracy**                | High                | Competitive  | Competitive   | High         |
-| **Precision / Recall / F1** | Strong              | Strong       | Strong        | Strong       |
-| **ROC-AUC**                 | High                | Good         | Good          | High         |
-| **5-Fold CV F1**            | See artifact        | See artifact | See artifact  | See artifact |
-
-The best model by F1 is selected and persisted to `model/pipeline.pkl`. The notebook and **Model Comparison** dashboard page display ROC curves, Precision-Recall curves, confusion matrices, and a CV F1 bar chart for all four models.
+The best model by F1 is automatically selected and saved. The notebook and **Model Comparison** page display full ROC curves, Precision-Recall curves, confusion matrices, and a CV F1 bar chart for all four models.
 
 ### Metric Definitions
 
+| Metric | Definition | Why It Matters |
+|--------|-----------|----------------|
+| **Precision (Fake)** | Of all articles flagged Fake, the fraction that are actually Fake | Reduces false alarms on real news |
+| **Recall (Fake)** | Of all actual Fake articles, the fraction correctly caught | Reduces missed misinformation |
+| **F1 Score** | Harmonic mean of Precision and Recall | Primary optimisation target |
+| **ROC-AUC** | Ranking quality across all decision thresholds | Threshold-independent performance measure |
 
-| Metric               | Definition                                                           | Why It Matters                            |
-| -------------------- | -------------------------------------------------------------------- | ----------------------------------------- |
-| **Precision (Fake)** | Of all articles flagged Fake, the fraction that are actually Fake    | Reduces false alarms on real news         |
-| **Recall (Fake)**    | Of all actual Fake articles, the fraction the model correctly caught | Reduces missed misinformation             |
-| **F1 Score**         | Harmonic mean of Precision and Recall                                | Primary optimization target               |
-| **ROC-AUC**          | Ranking quality across all decision thresholds                       | Threshold-independent performance measure |
-
-For misinformation detection, both Precision and Recall are critical: high Recall catches more fake news; high Precision avoids incorrectly flagging real news.
+For misinformation detection, both Precision and Recall are critical: high Recall catches more fake news, while high Precision avoids incorrectly flagging legitimate articles.
 
 ---
 
@@ -588,52 +602,24 @@ For misinformation detection, both Precision and Recall are critical: high Recal
 
 ### Streamlit Dashboard — News Credibility Analyzer
 
-[Live Demo](https://news-creditability.streamlit.app)
+**[🌐 Live Demo](https://news-creditability.streamlit.app)** &nbsp;·&nbsp; Run locally: `streamlit run app.py` → `http://localhost:8501`
 
-Run locally:
+| Page | Description |
+|------|-------------|
+| **Overview** | Key metrics (accuracy, F1, ROC-AUC, 5-fold CV F1), dataset summary, dual-milestone attribution |
+| **Dataset Intelligence** | Class distribution, text length distributions, top TF-IDF features per class |
+| **Model Comparison** | ROC curves, Precision-Recall curves, confusion matrices, CV F1 distribution, linear-model feature importance |
+| **Live Prediction Lab** | ML-only: paste text → Fake/Real verdict + confidence score + gauge |
+| **Deep Analysis** | Full agent: summary, risk factors, RAG sources, structured fact-checks; **Agent runtime** expander for **FAISS/Chroma**, **similarity/MMR**, and **Groq/Gemini** (Gemini falls back to Groq when configured) + optional feedback logging to `data/feedback/feedback.jsonl` |
+| **Architecture** | Training/runtime Mermaid diagrams, animated Milestone 2 pipeline, full repo structure map |
 
-```bash
-streamlit run app.py
-# Opens at http://localhost:8501
-```
-
-The application consists of six pages:
-
-
-| Page                     | Description                                                                                                       |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| **Overview**             | Key metrics (accuracy, F1, ROC-AUC, 5-fold CV F1), dataset summary, and attribution                               |
-| **Dataset Intelligence** | Class distribution, text length distributions, top TF-IDF features by class                                       |
-| **Model Comparison**     | ROC curves, Precision-Recall curves, confusion matrices, CV F1 distribution, feature importance for linear models |
-| **Live Prediction Lab**  | ML-only: sample text, Analyze → Fake/Real verdict + probabilities + gauge                                              |
-| **Deep Analysis**        | Full agent: summary, risk factors, RAG sources, verdict (`GROQ_API_KEY`, `data/rag/` recommended)                    |
-| **Architecture**         | Pipeline overview and repository structure map                                                                    |
-
-The app reads `model/pipeline.pkl` (best model) and `model/evaluation_results.json` (metrics). If either file is missing, the relevant pages display a clear prompt to run the training script or notebook — no stale or hardcoded data is ever shown.
-
----
-
-## Dashboard Metrics
-
-The Streamlit dashboard displays dataset statistics and model metrics (accuracy, precision, recall, F1, ROC-AUC, confusion matrices, CV F1) from a single source of truth: `model/evaluation_results.json`.
-
-**To generate the evaluation artifact:**
-
-Option A — run `notebook/news_credibility.ipynb` from top to bottom (run from repo root so `dataset/` and `src/` are on the path). The notebook covers data loading, EDA, preprocessing, feature engineering, model training, evaluation, and artifact export.
-
-Option B — run the evaluation script directly:
-
-   ```bash
-   python scripts/run_evaluation.py
-   ```
-
-This loads the data, trains all four models, evaluates on the stratified test set, selects the best by F1, and saves `model/evaluation_results.json` and `model/pipeline.pkl`.
+The app reads `model/pipeline.pkl` and `model/evaluation_results.json` at runtime. If either file is absent, the relevant page displays a clear prompt to run the training script — no stale or hardcoded data is ever shown.
 
 ---
 
 ## Deployment
 
-This project is structured for deployment to **Streamlit Community Cloud** (free tier). Localhost-only demonstrations are not accepted per project requirements.
+This project is structured for **Streamlit Community Cloud** (free tier). Local-only deployments do not satisfy project requirements.
 
 ### Deploy to Streamlit Community Cloud
 
@@ -641,12 +627,11 @@ This project is structured for deployment to **Streamlit Community Cloud** (free
 
 ```bash
 git add .
-git commit -m "feat: milestone 1 complete"
+git commit -m "feat: milestone complete"
 git push origin main
 ```
 
 > If `model/pipeline.pkl` exceeds 100 MB, use Git LFS:
->
 > ```bash
 > git lfs install && git lfs track "*.pkl"
 > git add .gitattributes && git commit -m "chore: add git lfs"
@@ -655,32 +640,31 @@ git push origin main
 **Step 2 — Connect to Streamlit**
 
 1. Go to [share.streamlit.io](https://share.streamlit.io) and sign in with GitHub.
-2. Click **New App** and select your repository.
+2. Click **New App** → select your repository.
 3. Set **Branch:** `main` and **Main file:** `app.py`.
-4. Under **Advanced settings** → **Secrets**, add your Groq key as TOML (same names as in `.env.example`). The app copies these into the process environment on startup so **Deep Analysis** and the agent can call Groq without a local `.env` file. See `.streamlit/secrets.example.toml` for flat or `[groq]` nested examples.
+4. Under **Advanced settings → Secrets**, add your keys as TOML — at minimum `GROQ_API_KEY` (see `.streamlit/secrets.example.toml` for flat or nested `[groq]`). Add `GEMINI_API_KEY` / `LLM_PROVIDER` only if you use Gemini.
 5. Click **Deploy**.
 
-**RAG index for Deep Analysis:** The app expects **`data/rag/faiss.index`** and **`data/rag/chunks.json`** in the deployed repo (small sample index from `scripts/build_rag_index.py`). Streamlit Cloud does not run that script for you; commit those files after building locally so the public app can show **Sources** and evidence-backed fact checks.
+> **RAG index for Deep Analysis:** The deployed app expects `data/rag/faiss.index` and `data/rag/chunks.json` to be committed to the repository. Streamlit Cloud does not run `build_rag_index.py` for you — build the index locally and commit the output files before deploying.
+>
+> **Optional Chroma backend:** If you want **RAG backend = chroma** in production (Deep Analysis → Agent runtime), also commit `data/rag/chroma_store/` (build locally via `python scripts/build_chroma_store.py`).
 
 **Step 3 — Verify**
 
-Your live application will be available at the URL shown in the Streamlit Cloud dashboard.
+Your live application URL will appear in the Streamlit Cloud dashboard after the build completes.
 
 ### Environment Requirements
 
+| Requirement | Value |
+|-------------|-------|
+| **Python** | 3.8 or higher |
+| **GPU** | Not required |
+| **RAM** | ~512 MB baseline (ML only); +300–800 MB when loading MiniLM for RAG or first agent run |
+| **Storage** | ~100–200 MB for `pipeline.pkl`; extra for `.cache/huggingface/` and `data/rag/` |
 
-| Requirement | Value                                    |
-| ----------- | ---------------------------------------- |
-| Python      | 3.8 or higher                            |
-| GPU         | Not required                             |
-| RAM         | ~512 MB baseline for ML; +~300–800 MB when loading MiniLM for RAG / first agent run |
-| Storage     | ~100–200 MB (`pipeline.pkl`); extra for `.cache/huggingface` and `data/rag/` when used |
+### Dependencies
 
-### Dependencies (`requirements.txt`)
-
-Core stack includes **Streamlit**, **scikit-learn**, **NLTK**, **Plotly**, plus **sentence-transformers**, **faiss-cpu**, **langgraph**, **groq**, and **python-dotenv** for the RAG index and Groq-backed agent. `requirements.txt` uses lower bounds compatible with **Streamlit Community Cloud**; upgrade within those ranges as needed.
-
-Install with:
+Core stack: **Streamlit**, **scikit-learn**, **NLTK**, **Plotly**. Milestone 2 additions: **sentence-transformers**, **faiss-cpu**, **langgraph**, **groq**, **python-dotenv**. `requirements.txt` uses lower bounds compatible with Streamlit Community Cloud.
 
 ```bash
 pip install -r requirements.txt
@@ -690,40 +674,61 @@ pip install -r requirements.txt
 
 ## Limitations
 
-
-| Area                        | Limitation                                                                                                                |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| **Language**                | Preprocessing uses English NLTK resources; the dataset is English-only                                                    |
-| **Domain**                  | Trained on the Kaggle Fake and Real News corpus; may not generalize to other domains or topics                            |
-| **Task Scope**              | Binary classification only (Fake/Real); no multi-label support for satire, misleading framing, or out-of-context articles |
-| **Temporal Generalization** | Random train/test split; performance may be overstated if the news distribution shifts over time                          |
-| **Model Ceiling**           | Classical TF-IDF with LR/SVM; not state-of-the-art compared to fine-tuned transformer models                              |
-| **Probability Calibration** | `predict_proba` outputs are not formally calibrated (no Platt scaling or isotonic regression applied)                     |
-| **Agent / LLM**             | Groq outputs depend on model and prompt; RAG sample index is small — not a substitute for professional fact-checking        |
+| Area | Limitation |
+|------|-----------|
+| **Language** | Preprocessing uses English NLTK resources; the dataset is English-only |
+| **Domain** | Trained on the Kaggle Fake and Real News corpus; may not generalise to other domains or topics |
+| **Task Scope** | Binary classification only (Fake/Real); no multi-label support for satire, misleading framing, or out-of-context articles |
+| **Temporal Generalisation** | Random train/test split; performance may be overstated if the news distribution shifts over time |
+| **Model Ceiling** | Classical TF-IDF + LR/SVM; not state-of-the-art compared to fine-tuned transformer models |
+| **Probability Calibration** | `predict_proba` outputs are not formally calibrated (no Platt scaling or isotonic regression) |
+| **Agent / LLM** | LLM outputs (Groq/Gemini) depend on model and prompt; the RAG index is project-sized and is not a substitute for professional fact-checking |
 
 ---
 
 ## Future Work
 
-**Already in this repo:** LangGraph agent, FAISS + MiniLM RAG (`scripts/build_rag_index.py`), Groq integration (`src/agent/llm_service.py`), structured verification JSON, UI `final_report` builder (`src/agent/ui_report.py`), and the **Deep Analysis** Streamlit page.
+**Already in this repo:** LangGraph agent (including `validate_report` + bounded retry), FAISS + optional Chroma + MMR retrieval, Groq + optional Gemini (with Groq fallback), structured verification JSON, `final_report` builder, Deep Analysis UI with Agent runtime controls, and optional local feedback logging.
 
-**Still planned / stretch goals:** **REST API** for batch inference; **multi-label** taxonomies (satire, misleading, out-of-context); **probability calibration** (e.g. Platt scaling); **larger or live fact-check corpora** (beyond the bundled sample index); **transformer baseline** (e.g. fine-tuned mBERT) compared to TF-IDF; optional **Chroma** alongside FAISS; **hardened monitoring** (rate limits, auth) for production deployments.
+**Planned / stretch goals:**
+
+- **REST API** for batch inference
+- **Multi-label taxonomies** (satire, misleading, out-of-context)
+- **Probability calibration** (e.g. Platt scaling / isotonic regression)
+- **Larger or live fact-check corpora** beyond the bundled sample index
+- **Transformer baseline** (e.g. fine-tuned mBERT) compared to TF-IDF
+- **Hardened production deployment** (rate limiting, authentication, monitoring)
 
 ---
 
 ## Milestone 1 Deliverables Checklist
 
-- [X]  Problem understanding and media use-case documented
-- [X]  Input-output specification (`text → credibility label + probability`)
-- [X]  System architecture diagram
-- [X]  Working Streamlit application (**News Credibility Analyzer**) with multi-page UI (including **Deep Analysis** agent page)
-- [X]  Model performance evaluation report (Precision · Recall · F1 · ROC-AUC · CV F1)
-- [X]  Multiple models trained and compared (Logistic Regression · Naive Bayes · Random Forest · SVM)
-- [X]  Confusion matrices, ROC curves, and Precision-Recall curves
-- [X]  TF-IDF feature interpretability (top fake/real indicative terms)
-- [X]  Dataset attribution (Kaggle Fake and Real News) in app and README
-- [X]  Publicly hosted application URL — [Streamlit Cloud demo](https://news-creditability.streamlit.app/)
-- [X]  LangGraph agent path with RAG (FAISS), Groq LLM hooks, structured verification, and **Deep Analysis** UI page
+> Aligned with **Project 11 — AI/ML Systems** coursework expectations. See [`docs/Project_11_AI_ML.pdf`](docs/Project_11_AI_ML.pdf) for the formal brief, rubric, and submission notes.
+
+- [x] Problem understanding and media use-case documented
+- [x] Input–output specification (`text → credibility label + probability`)
+- [x] System architecture diagram (training + inference; extended for Milestone 2)
+- [x] Working Streamlit application (**News Credibility Analyzer**) with multi-page UI
+- [x] Model performance evaluation report (Precision · Recall · F1 · ROC-AUC · CV F1)
+- [x] Multiple models trained and compared (Logistic Regression · Naive Bayes · Random Forest · SVM)
+- [x] Confusion matrices, ROC curves, and Precision-Recall curves
+- [x] TF-IDF feature interpretability (top fake/real indicative terms)
+- [x] Dataset attribution (Kaggle Fake and Real News) in app and README
+- [x] Publicly hosted application — [Streamlit Cloud demo](https://news-creditability.streamlit.app/)
+
+## Milestone 2 Deliverables Checklist
+
+> Extends Project 11 with an **agentic AI** layer: LangGraph orchestration, RAG (FAISS default, optional Chroma; similarity or MMR), and LLM reasoning (Groq primary, optional Gemini with Groq fallback).
+
+- [x] **Agentic workflow** — `src/agent/graph.py`: `normalize → ml_classify → conditional → … → report → validate_report` (with `plan_queries → retrieve → verify` when confidence is below threshold; bounded report retry on validation failure)
+- [x] **RAG** — `src/rag/` + `data/rag/` (`faiss.index`, `chunks.json`; optional `chroma_store/`); build via `scripts/build_rag_index.py` and optionally `scripts/build_chroma_store.py`
+- [x] **LLM integration** — `src/agent/llm_service.py` (Groq; optional Gemini; HF Inference API when configured for other call sites); used for query planning, JSON verification, and narrative reporting
+- [x] **Structured verification** — `supported` / `contradicted` / `unknown` buckets parsed in `src/agent/nodes/verify.py`
+- [x] **UI: Deep Analysis** — full LangGraph path, **Agent runtime** expander (RAG backend, MMR, LLM provider), live stream/trace, `final_report` (summary, risks, sources, fact-checks, rubric fields, disclaimer), optional `data/feedback/feedback.jsonl`
+- [x] **UI: Live Prediction Lab** — fast ML-only path (same `clean_text` + `pipeline.pkl` as the agent's ML node; no FAISS step)
+- [x] **UI: Architecture** — Milestone 2 animated pipeline, training + runtime LangGraph Mermaid diagrams, repo structure map
+- [x] **Configuration & deployment** — `requirements.txt`, `.env` / Streamlit secrets for `GROQ_API_KEY`, full local setup documentation
+- [x] **Documentation** — README overview, architecture, and checklists cross-linked to [`docs/Project_11_AI_ML.pdf`](docs/Project_11_AI_ML.pdf)
 
 ---
 
@@ -731,6 +736,8 @@ pip install -r requirements.txt
 
 **Project 11 · Intelligent News Credibility Analysis and Agentic Misinformation Monitoring**
 
-Classical ML (scikit-learn) · Optional RAG (FAISS + MiniLM) · Optional LLM (Groq) · Streamlit
+*Classical ML (scikit-learn) · RAG (FAISS/Chroma + MiniLM + MMR) · LLM (Groq/Gemini) · Streamlit*
+
+Made with ❤️ by [Shaik Tajuddin](https://github.com/Taj-2005), [Nipun](https://github.com/nipun1803), and [Hadole](https://github.com/omkar-hadole) — Section A
 
 </div>

@@ -24,8 +24,10 @@ def run_report_node(state: AgentState, **_kwargs: Any) -> Dict[str, Any]:
 
     Combines ``ml_*`` fields and ``verification`` (``supported`` / ``contradicted`` / ``unknown``).
     """
-    # TypedDict is dict-like; pass through for the builder
-    final_report = build_ui_final_report(dict(state), use_llm_summary=True)
+    # Retry loop support: first attempt tries Groq summary; retry can fall back to deterministic.
+    attempt = int(state.get("report_attempt") or 0)
+    use_llm = attempt <= 0
+    final_report = build_ui_final_report(dict(state), use_llm_summary=use_llm)
     return {"final_report": final_report}
 
 
