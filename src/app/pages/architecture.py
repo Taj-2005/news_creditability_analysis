@@ -1,6 +1,12 @@
 """Architecture — system diagram (Mermaid), train vs inference, repo mapping. Enhanced card-based layout."""
 
 import streamlit as st
+
+from src.app.components.architecture_flow import (
+    architecture_pipeline_css,
+    build_pipeline_markup,
+    render_architecture_toggle_caption,
+)
 from src.app.components.ui import page_header
 from src.app.core import get_model_algorithm_display, MODEL_FILENAME, MODEL_DIR_NAME
 
@@ -298,6 +304,30 @@ def render():
     _inject_styles()
     page_header("System architecture", "End-to-end flow from data to deployment.")
 
+    # ── Milestone 2: animated agentic runtime (HTML/CSS) ───────────────────────
+    st.markdown('<p class="arch-eyebrow">00 / Agentic runtime</p>', unsafe_allow_html=True)
+    st.markdown(
+        '<h2 class="arch-heading">Milestone 2 · ML, RAG, and LLM in one pipeline</h2>',
+        unsafe_allow_html=True,
+    )
+    st.caption(
+        "Interactive diagram: highlight the **ML-only shortcut** vs the **full agent path** "
+        "(query planning → FAISS retrieval → verification → structured report)."
+    )
+    path_choice = st.radio(
+        "Path emphasis",
+        ["ML only mode", "Agent mode"],
+        horizontal=True,
+        key="arch_milestone2_path",
+        label_visibility="collapsed",
+    )
+    st.markdown(render_architecture_toggle_caption())
+    mode_key = "agent" if path_choice == "Agent mode" else "ml_only"
+    st.markdown(f"<style>{architecture_pipeline_css()}</style>", unsafe_allow_html=True)
+    st.markdown(build_pipeline_markup(mode_key), unsafe_allow_html=True)
+
+    st.markdown('<hr class="arch-rule">', unsafe_allow_html=True)
+
     # ── Section 1: Mermaid diagrams ──
     st.markdown('<p class="arch-eyebrow">01 / Pipeline diagrams</p>', unsafe_allow_html=True)
     st.markdown('<h2 class="arch-heading">High-level workflow</h2>', unsafe_allow_html=True)
@@ -327,10 +357,16 @@ flowchart LR
     """
 
     inference_mermaid = """
-flowchart LR
-    U[User Input] --> C[clean_text]
-    C --> P[TF-IDF + Model]
-    P --> V[Verdict + Proba]
+flowchart TB
+    U[User input] --> N[normalize]
+    N --> M[ml_classify TF-IDF + model]
+    M --> R{ml_confidence < threshold?}
+    R -->|Yes| Q[plan_queries Groq]
+    Q --> F[retrieve FAISS]
+    F --> V[verify Groq or HF]
+    V --> Rep[report + ui_report]
+    R -->|No / error| Rep
+    Rep --> O[Verdict + structured fields]
     """
 
     st.components.v1.html(
@@ -339,8 +375,8 @@ flowchart LR
     )
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
     st.components.v1.html(
-        _mermaid_html(inference_mermaid, height=160, label="Inference pipeline"),
-        height=210, scrolling=False
+        _mermaid_html(inference_mermaid, height=320, label="Runtime · LangGraph + ML branch"),
+        height=380, scrolling=False
     )
 
     st.markdown('<hr class="arch-rule">', unsafe_allow_html=True)
@@ -372,14 +408,20 @@ flowchart LR
         </div>
         <br>
         <div class="flow-steps">
-          <span class="flow-step">User Input</span>
+          <span class="flow-step">User input</span>
           <span class="flow-arrow">→</span>
-          <span class="flow-step">clean_text()</span>
+          <span class="flow-step">normalize + ml_classify</span>
           <span class="flow-arrow">→</span>
-          <span class="flow-step">Pipeline</span>
+          <span class="flow-step">conditional</span>
           <span class="flow-arrow">→</span>
-          <span class="flow-step highlight">Verdict + Probability</span>
+          <span class="flow-step">plan → RAG → verify</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-step highlight">report + verdict</span>
         </div>
+        <p style="font-size:12px;color:#64748b;margin-top:10px;font-family:'DM Mono',monospace;">
+          Low ML confidence triggers RAG + LLM verification; high confidence skips to report.
+          Live Prediction uses the classifier path only; Deep Analysis runs the full graph (UI may force RAG).
+        </p>
         """,
         unsafe_allow_html=True,
     )
@@ -455,8 +497,18 @@ flowchart LR
                 </div>
                 <div class="file-item">
                   <span class="arrow">▸</span>
+                  <div><span class="file-name">src/agent/graph.py</span><br>
+                  <span class="file-desc">LangGraph: normalize → ML → branch → report (optional RAG path)</span></div>
+                </div>
+                <div class="file-item">
+                  <span class="arrow">▸</span>
+                  <div><span class="file-name">src/agent/llm_service.py</span><br>
+                  <span class="file-desc">Groq primary; Hugging Face inference API when configured</span></div>
+                </div>
+                <div class="file-item">
+                  <span class="arrow">▸</span>
                   <div><span class="file-name">No training code</span><br>
-                  <span class="file-desc">Zero training dependencies at runtime</span></div>
+                  <span class="file-desc">Zero sklearn training at dashboard runtime</span></div>
                 </div>
               </div>
             </div>
@@ -500,6 +552,14 @@ flowchart LR
             <tr>
               <td>src/app/</td>
               <td>Streamlit dashboard, pages, core (load_model, prediction)</td>
+            </tr>
+            <tr>
+              <td>src/agent/</td>
+              <td>LangGraph workflow, nodes (normalize, ml_classify, plan_queries, retrieve, verify, report), state</td>
+            </tr>
+            <tr>
+              <td>data/rag/</td>
+              <td>FAISS index + chunk metadata for retrieval (build via scripts when needed)</td>
             </tr>
           </tbody>
         </table>

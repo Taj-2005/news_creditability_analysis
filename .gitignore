@@ -1,9 +1,6 @@
 .vscode/
 .DS_Store
 __pycache__/
-news_credebility.mp4
-docs/Project 11_AI_ML.pdf
-docs/MILESTONE2_TRANSFORMATION_PLAN.md
 .env
 .venv
 .cache/
