@@ -654,6 +654,8 @@ git push origin main
 4. Under **Advanced settings** → **Secrets**, add your Groq key as TOML (same names as in `.env.example`). The app copies these into the process environment on startup so **Deep Analysis** and the agent can call Groq without a local `.env` file. See `.streamlit/secrets.example.toml` for flat or `[groq]` nested examples.
 5. Click **Deploy**.
 
+**RAG index for Deep Analysis:** The app expects **`data/rag/faiss.index`** and **`data/rag/chunks.json`** in the deployed repo (small sample index from `scripts/build_rag_index.py`). Streamlit Cloud does not run that script for you; commit those files after building locally so the public app can show **Sources** and evidence-backed fact checks.
+
 **Step 3 — Verify**
 
 Your live application will be available at the URL shown in the Streamlit Cloud dashboard.

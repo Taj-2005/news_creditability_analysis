@@ -64,7 +64,9 @@ def run_retrieve_node(
         return {
             "retrieved_chunks": [],
             "rag_error": (
-                f"RAG index not found under {base}. Run: python scripts/build_rag_index.py"
+                "RAG index missing (expected data/rag/faiss.index and data/rag/chunks.json). "
+                "From the repo root run: python scripts/build_rag_index.py — then commit "
+                "data/rag/ for Streamlit Cloud, which does not run that build automatically."
             ),
         }
 

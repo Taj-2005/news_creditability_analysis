@@ -170,15 +170,15 @@ def render():
                 unsafe_allow_html=True,
             )
     else:
-        st.markdown(
-            '<div class="da-body" style="color:#94a3b8;">No retrieved passages — '
-            "usually the FAISS index is missing or retrieval failed. "
-            "Build it with: <code>python scripts/build_rag_index.py</code></div>",
-            unsafe_allow_html=True,
-        )
         rag_err = (out or {}).get("rag_error")
         if rag_err:
-            st.caption(str(rag_err))
+            st.info(str(rag_err))
+        else:
+            st.markdown(
+                '<div class="da-body" style="color:#94a3b8;">No retrieved passages — '
+                "retrieval returned no hits for this query.</div>",
+                unsafe_allow_html=True,
+            )
 
     with st.expander("Fact checks (structured)", expanded=False):
         rows = fr.get("fact_checks") or []
