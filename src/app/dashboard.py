@@ -1,8 +1,12 @@
 """
 News Credibility AI — production-grade multi-page dashboard.
 Pure white SaaS theme, wide layout, sidebar navigation, Plotly-only charts.
+
+Pages are loaded lazily (importlib) so a cold start only imports the shell + the
+currently selected tab — not LangGraph/Plotly for every route. Improves time-to-first-UI.
 """
 
+import importlib
 import sys
 from pathlib import Path
 
@@ -16,28 +20,25 @@ from src.config.env_bootstrap import bootstrap_runtime_env
 from src.app.components.styles import inject_app_css
 from src.app.core import get_model_algorithm_display, PAGE_TITLE
 from src.app.nav_config import SIDEBAR_PAGE_DESCRIPTIONS, SIDEBAR_PAGE_ORDER
-from src.app.pages import (
-    architecture,
-    dataset_insights,
-    deep_analysis,
-    home,
-    live_prediction,
-    model_compare,
-)
 
-_PAGE_RENDERERS = {
-    "Overview": home.render,
-    "Dataset Intelligence": dataset_insights.render,
-    "Model Comparison": model_compare.render,
-    "Live Prediction Lab": live_prediction.render,
-    "Deep Analysis": deep_analysis.render,
-    "Architecture": architecture.render,
+# Page label -> dotted module path (render() is called after import).
+_PAGE_MODULE_BY_NAME: dict[str, str] = {
+    "Overview": "src.app.pages.home",
+    "Dataset Intelligence": "src.app.pages.dataset_insights",
+    "Model Comparison": "src.app.pages.model_compare",
+    "Live Prediction Lab": "src.app.pages.live_prediction",
+    "Deep Analysis": "src.app.pages.deep_analysis",
+    "Architecture": "src.app.pages.architecture",
 }
 
-PAGES = {
-    name: (SIDEBAR_PAGE_DESCRIPTIONS[name], _PAGE_RENDERERS[name])
-    for name in SIDEBAR_PAGE_ORDER
-}
+
+def _render_page(page_name: str) -> None:
+    mod_path = _PAGE_MODULE_BY_NAME[page_name]
+    mod = importlib.import_module(mod_path)
+    mod.render()
+
+
+PAGES = {name: SIDEBAR_PAGE_DESCRIPTIONS[name] for name in SIDEBAR_PAGE_ORDER}
 
 APP_VERSION = "2.0.0"
 
@@ -270,8 +271,8 @@ def run():
             unsafe_allow_html=True,
         )
 
-    # Render selected page
-    PAGES[page][1]()
+    # Render selected page (lazy import — only this tab's deps load)
+    _render_page(page)
 
 
 if __name__ == "__main__":

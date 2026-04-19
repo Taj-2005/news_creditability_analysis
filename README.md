@@ -18,7 +18,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-22C55E?style=flat-square)](LICENSE.md)
 [![Dataset](https://img.shields.io/badge/Dataset-Fake%20%26%20Real%20News%20(Kaggle)-6366F1?style=flat-square)](https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset)
 
-**[🚀 Live Demo](https://news-creditability.streamlit.app/)** &nbsp;·&nbsp; **[▶️ Video Walkthrough](https://youtu.be/U1Nnd-8Odbs?si=5IFfdhePuDTRlmCg)** &nbsp;·&nbsp; **[📑 Research paper](docs/research_paper.pdf)** &nbsp;·&nbsp; **[📄 Project brief](docs/Project_11_AI_ML.pdf)**
+**[🚀 Live Demo](https://news-creditability.streamlit.app/)** &nbsp;·&nbsp; **[▶️ Milestone 1 video](https://youtu.be/U1Nnd-8Odbs?si=5IFfdhePuDTRlmCg)** &nbsp;·&nbsp; **[▶️ Milestone 2 video](https://youtu.be/0iOss9HPAas?si=FdLYXOQ33MqDfbQL)** &nbsp;·&nbsp; **[📑 Research paper](docs/research_paper.pdf)** &nbsp;·&nbsp; **[📄 Project brief](docs/Project_11_AI_ML.pdf)**
 
 ---
 
