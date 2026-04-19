@@ -1,0 +1,83 @@
+%% News Credibility Analysis — project architecture (M1 training + M2 agent + UI)
+%% Source for PNG export via: npx @mermaid-js/mermaid-cli -i project_architecture.mmd -o project_architecture.png
+
+flowchart TB
+  %% -------- Inputs & artefacts --------
+  subgraph DATA["Data & artefacts"]
+    CSV[["Kaggle CSVs\nFake.csv / True.csv"]]
+    RAG[["RAG index\ndata/rag/\nfaiss + chunks\noptional Chroma"]]
+    PKL[["model/pipeline.pkl\nTF-IDF + best classifier"]]
+    MET[["model/evaluation_results.json"]]
+  end
+
+  %% -------- Milestone 1: training --------
+  subgraph M1["Milestone 1 — classical ML training"]
+    LOAD[load_dataset] --> CLEAN_TRAIN[clean_text + prepare]
+    CLEAN_TRAIN --> SPLIT[stratified split]
+    SPLIT --> TFIDF[TF-IDF fit]
+    TFIDF --> MODELS["Train & compare\nLR · NB · RF · SVM"]
+    MODELS --> BEST[select best F1]
+    BEST --> PKL
+    BEST --> MET
+  end
+
+  CSV --> LOAD
+
+  %% -------- UI --------
+  subgraph UI["Streamlit — News Credibility Analyzer"]
+    HOME[Overview / Dataset / Model pages]
+    LIVE["Live Prediction Lab\nML-only path"]
+    DEEP["Deep Analysis\nLangGraph stream"]
+  end
+
+  %% -------- Milestone 1: fast inference --------
+  subgraph FAST["Milestone 1 — fast inference"]
+    UTXT1[user article text] --> CT1[clean_text]
+    CT1 --> PKL
+    PKL --> PRED[predict_proba]
+    PRED --> OUT1["Verdict + confidence\n+ risk gauge"]
+  end
+
+  LIVE --> UTXT1
+  PKL --> PRED
+
+  %% -------- Milestone 2: agent --------
+  subgraph M2["Milestone 2 — LangGraph credibility agent"]
+    UTXT2[user article text] --> N0[normalize\nclean_text]
+    N0 --> N1[ml_classify\npipeline.pkl]
+    N1 --> BR{{"After ML:\nthreshold / errors"}}
+    BR -->|"low ml_confidence"| N2[plan_queries\nGroq / Gemini]
+    BR -->|"high confidence or error"| N5[report\nfinal_report builder]
+    N2 --> N3[retrieve\nMiniLM · FAISS or Chroma\nsimilarity or MMR]
+    N3 --> N4[verify\nLLM → JSON buckets\nsupported / contradicted / unknown]
+    N4 --> N5
+    N5 --> N6[validate_report\nschema guard]
+    N6 --> VR{{"valid?"}}
+    VR -->|"retry once"| N5
+    VR -->|"pass / give up"| ENDN([END])
+    OUT2["Structured final_report\n+ UI trace"]
+  end
+
+  DEEP --> UTXT2
+  RAG --> N3
+  PKL --> N1
+  N6 --> OUT2
+
+  %% -------- LLM services (side annotation) --------
+  subgraph LLM["LLM services"]
+    GROQ[Groq API]
+    GEM[Gemini optional\nfallback to Groq]
+  end
+
+  N2 -.-> GROQ
+  N4 -.-> GROQ
+  N5 -.-> GROQ
+  GEM -.-> N2
+
+  HOME --> MET
+
+  style M1 fill:#e8f4fc,stroke:#1d4ed8
+  style M2 fill:#f3e8ff,stroke:#7c3aed
+  style DATA fill:#ecfdf5,stroke:#059669
+  style FAST fill:#fff7ed,stroke:#ea580c
+  style UI fill:#f8fafc,stroke:#64748b
